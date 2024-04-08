@@ -1,0 +1,244 @@
+---
+title: Creating a Simple Login Using Angular (Angular + Spring Boot) Part2 — Learning Angular
+date: 2024/1/24
+description: Tutorial on Creating a Simple Login Using Angular (Angular + Spring Boot) Part2
+tag: Angular, Spring Boot
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating a Simple Login Using Angular (Angular + Spring Boot) #Part2 — Learning Angular
+
+### INTRODUCTION
+
+In the previous article, we created the Login Component Template. In #Part2, we will continue by creating a Component for the Index or Dashboard
+
+### COMPONENT HOME
+
+Here, we will only display a simple view with the wording ‘Welcome’ after a successful login.
+
+`Home Component`
+
+<Image
+  src="/images/post12_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+<div class="container">
+    <div class="heading text-center">
+        <h1>Welcome</h1>
+    </div>
+</div>
+```
+
+### COMPONENT TEMPLATE DASHBOARD
+
+Similar to the Login Component Template we created earlier, this time we will create the Dashboard Component Template. Here, we will create routing to the Home Component.
+
+`Template Dashboard Structure`
+
+<Image
+  src="/images/post12_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+import { Routes } from '@angular/router';
+import { HomeComponent } from '../home/home.component';
+import {AuthGuard} from '../../interceptor/auth.guard';
+
+export const DashboardRoutingModule: Routes = [
+
+    { path: 'home', canActivate: [AuthGuard], component: HomeComponent},
+
+];
+```
+
+Don’t forget to declare the Login Component in dasboard.module.ts.
+
+```js
+import { NgModule } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { DashboardRoutingModule } from './dashboard-routing.module'
+import { HomeComponent } from '../home/home.component';
+
+
+@NgModule({
+  declarations: [
+  HomeComponent,
+],
+  imports: [
+    CommonModule,
+    RouterModule.forChild(DashboardRoutingModule),
+    ReactiveFormsModule,
+    FormsModule
+  ]
+})
+export class DashboardModule { }
+```
+
+### APP MODULE
+
+After creating the Template Login Component and Template Dashboard Component, we will declare these two components in the App Module, which is the main module. Similar to these two components, we need to create routing and declare it in app.module.ts.
+
+```js
+import { NgModule } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { RouterModule, Routes } from "@angular/router";
+import { TemplateloginComponent } from "./view/templatelogin/templatelogin/templatelogin.component";
+import { DashboardComponent } from "./view/dashboard/dashboard.component";
+import { from } from "rxjs";
+import { LoginGuard } from './interceptor/login.guard';
+import { AuthGuard } from './interceptor/auth.guard';
+
+const routes: Routes = [
+  {
+    path: "",
+    redirectTo: "login",
+    pathMatch: "full",
+    canActivate: [LoginGuard]
+  },
+  {
+    path: "",
+    component: TemplateloginComponent,
+    canActivate: [LoginGuard],
+    children: [
+      {
+        path: "",
+        loadChildren: () =>
+          import(
+            "./view/templatelogin/templatelogin/templatelogin.module"
+          ).then((m) => m.TemplateloginModule),
+      },
+    ],
+  },
+  {
+    path: "index",
+    redirectTo: "index/home",
+    pathMatch: "full",
+  },
+  {
+    path: "index",
+    component: DashboardComponent,
+    children: [
+      {
+        path: "",
+        canActivate: [AuthGuard],
+        loadChildren: () =>
+          import("./view/dashboard/dashboard.module").then(
+            (m) => m.DashboardModule
+          ),
+      },
+    ],
+  },
+];
+@NgModule({
+  declarations: [],
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+```js
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { HttpClientModule } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { TemplateloginComponent } from './view/templatelogin/templatelogin/templatelogin.component';
+import { HeaderComponent } from './view/templatelogin/header/header.component';
+import { FooterComponent } from './view/templatelogin/footer/footer.component';
+import { RouterModule } from '@angular/router';
+import { DashboardComponent } from './view/dashboard/dashboard.component';
+import { HomeComponent } from './view/home/home.component';
+import { RegistrationComponent } from './view/registration/registration.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    TemplateloginComponent,
+    DashboardComponent,
+    HeaderComponent,
+    FooterComponent,
+    RegistrationComponent,
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    RouterModule,
+    HttpClientModule,
+    FormsModule
+  ],
+  entryComponents: [HomeComponent],
+  providers: [],
+  bootstrap: [AppComponent]
+})
+
+export class AppModule { }
+```
+
+### RESULT 
+
+Run the following command to run the application. Then open the URL http://localhost:4201/ in your browser.
+
+```js
+npm serve --port 4200
+```
+
+`Registration Form`
+
+<Image
+  src="/images/post12_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Log For Registration Form`
+
+<Image
+  src="/images/post12_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Login Form`
+
+<Image
+  src="/images/post12_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Log For Login Form`
+
+<Image
+  src="/images/post12_img6.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

@@ -1,0 +1,488 @@
+---
+title: Creating a Simple Login Using Angular (Angular + Spring Boot) Part1 — Learning Angular
+date: 2024/1/24
+description: Tutorial on Creating a Simple Login Using Angular (Angular + Spring Boot) Part1
+tag: Angular, Spring Boot
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating a Simple Login Using Angular (Angular + Spring Boot) #Part1 — Learning Angular
+
+### INTRODUCTION
+
+In the previous article, we created a Simple Rest API using Spring Boot. This time, we will try to integrate Spring Boot with Angular as the Frontend. As an example, we will create a simple Login form, Register form, and an Index/Dashboard page after successfully logging in.
+
+### PREREQUISITE
+
+Before starting with Angular, the first thing to do is to install Node JS. This is necessary because we need NPM (Node Package Manager) to install some Angular packages/modules by running commands.
+
+```js
+npm install - g @angular/cli
+```
+
+After that, create a new project using the command.
+
+```js
+ng new <Project Name>
+```
+
+### PROJECT STRUCTURE
+
+`Project Structure`
+
+<Image
+  src="/images/post11_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+After running the above command, a project folder will be created with the specified project name.
+
+- node_modules: Folder containing project dependencies
+- src: Folder containing the project's source code
+- package.json: File with information about libraries used in the project
+
+In creating an Angular project, at least component and module files are required. Use the following command to create a component folder.
+
+```js
+ng generate component <component_name>
+```
+
+Here, we will separate the Routing component for Login & Registration and the Routing for the Index. But before that, we need to create a Service along with its Object first to process the API for Registration & Login.
+
+### INTEGRATION SERVICE
+
+`Integration Service`
+
+<Image
+  src="/images/post11_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+export class ApiResponse {
+  header: HeaderResponse
+  payload: any
+}
+
+export interface HeaderResponse {
+  responseCode: string;
+  responseMessage: string;
+}
+```
+
+```js
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  joinDate: Date;
+  deleteDate: Date;
+  status: string;
+  address: string;
+  gender: string;
+  sessionId: string;
+  lastActivity: Date;
+}
+```
+
+```js
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { User } from '../../entity/user';
+import { ApiResponse} from "../../entity/api.response";
+import { map } from 'rxjs/operators';
+import { environment} from "../../../environments/environment";
+import {BehaviorSubject, Observable} from "rxjs";
+
+@Injectable({
+    providedIn: 'root'
+})
+
+export class Loginservice {
+
+    private userSubject : BehaviorSubject<User>;
+    public user : Observable<User>;
+
+    constructor(private http: HttpClient){
+        this.userSubject = new BehaviorSubject<User>(JSON.parse(localStorage.getItem('user')));
+        this.user = this.userSubject.asObservable();
+    }
+
+    public get userValue(): User {
+        return this.userSubject.value;
+    }
+
+    login(payload : string) {
+        return this.http.post<ApiResponse>(`${environment.apiUrl}/clinic-user/user/login`, payload)
+          .pipe(map(res => {
+            console.log("getUser Response : " + JSON.stringify(res));
+            if (res.header.responseCode === '00') {
+              localStorage.setItem('user', JSON.stringify(res.payload.object));
+              this.userSubject.next(res.payload.object);
+            } else {
+              console.log('login failed');
+            }
+            return res;
+          }));
+    }
+
+    registration(payload : string) {
+      return this.http.post<ApiResponse>(`${environment.apiUrl}/clinic-user/user/register`, payload)
+        .pipe(map(res => {
+          console.log("register Response : " + JSON.stringify(res));
+          if (res.header.responseCode === '00') {
+            console.log('registration success');
+          } else {
+            console.log('registration failed');
+          }
+          return res;
+        }));
+    }
+
+    checkSession(payload : string) {
+      return this.http.post<ApiResponse>(`${environment.apiUrl}/clinic-user/user/check`, payload)
+        .pipe(map(res => {
+          console.log("Check Session Response : " + JSON.stringify(res));
+          if (res.payload.object === true) {
+            console.log('Check Session success');
+          } else {
+            console.log('Check Session failed');
+          }
+          return res;
+        }));
+    }
+
+    logout(payload : string) {
+      return this.http.post<ApiResponse>(`${environment.apiUrl}/clinic-user/user/logout`, payload)
+        .pipe(map(res => {
+          console.log("Logout Success : " + JSON.stringify(res.payload.object));
+          this.userSubject.next(null);
+          localStorage.removeItem('user');
+          return res;
+        }));
+    }
+
+}
+```
+
+In the above code, we create two services to handle Login requests, save user details in local storage, and handle Registration requests. We will use these services in the Login and Registration components.
+
+### COMPONENT LOGIN
+
+Next, we will create an HTML form for login and a component to handle the Login Form Request.
+
+`Component Login`
+
+<Image
+  src="/images/post11_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+<div class="container">
+  <div class="heading text-center">
+      <h1>Silahkan Login</h1>
+    </div>
+    <div class="sign-box">
+      <form id="form_login" class="form-general form-login" novalidate>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="userName">Username : </label>
+              <input #username type="text" class="form-control" name="username" id="username"
+                    placeholder="Masukkan username" value="" required>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="userName">Password : </label>
+              <input #password type="password"  class="form-control" name="password"
+                     id="password" placeholder="Masukkan password" value="" required>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="text-right">
+              <button class="btn btn-primary w-100 mt-2" (click)="login()" type="button">LOGIN </button>
+              <a href="" [routerLink]="['/registartion']">Registrasi</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+```
+
+```js
+import { Component, OnInit, ViewChild,ElementRef,AfterViewInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import {catchError, first, retry} from 'rxjs/operators';
+import { Router, ActivatedRoute } from '@angular/router';
+import { User } from '../../entity/user';
+import { map } from 'rxjs/operators';
+import { Loginservice} from '../../integration/service/loginService';
+import { environment} from "../../../environments/environment";
+
+@Component({
+    selector: 'app-login',
+    templateUrl: './login.component.html',
+    styleUrls: ['./login.component.css']
+})
+
+export class LoginComponent implements OnInit {
+
+  private userSubject: BehaviorSubject<User>;
+  public user: Observable<User>;
+
+  @ViewChild('username') input : ElementRef;
+  @ViewChild('password') inputpassword : ElementRef;
+
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private loginService: Loginservice) {
+
+   this.userSubject = new BehaviorSubject<User>(JSON.parse(localStorage.getItem('user')));
+   this.user = this.userSubject.asObservable();
+
+  }
+
+ ngOnInit(): void {}
+
+ login(){
+
+    let username: string;
+    let password: string;
+    username = this.input.nativeElement.value;
+    password = this.inputpassword.nativeElement.value;
+    let payload = {
+        "payload":{
+          "username": username,
+          "password" : password
+        },
+        "header":{
+          "requestId":"test",
+          "requestDS":"test",
+          "session":"test",
+          "uName":"test",
+          "command":"test"
+        }
+    };
+    console.log('ISI PAYLOAD ' + JSON.stringify(payload));
+    this.loginService.login(JSON.stringify(payload)).
+        pipe(first()).subscribe(data => {
+            console.log('ISI DATA ' + data);
+            if (data.header.responseCode == '00' ){
+                this.router.navigate(['/index']);
+            }
+        },error => {
+            console.log('error : ', error);
+        });
+    }
+
+}
+```
+
+### COMPONENT REGISTRATION
+
+Similar to before, we will create an HTML Registration Form and a component to handle the Registration Form Request.
+
+`Registration Component`
+
+<Image
+  src="/images/post11_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+<div class="container">
+    <div class="heading text-center">
+        <h1>Silahkan Daftar</h1>
+      </div>
+      <div class="sign-box">
+        <form id="form_login" class="form-general form-login" novalidate>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="userName">Username : </label>
+                <input #username type="text" class="form-control" name="username" id="username"
+                      placeholder="Masukkan username" value="" required>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="password">Password : </label>
+                <input #password type="password"  class="form-control" name="password"
+                       id="password" placeholder="Masukkan password" value="" required>
+              </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                  <label for="email">Email : </label>
+                  <input #email type="text" class="form-control" name="email" id="email"
+                        placeholder="Masukkan Email" value="" required>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                  <label for="address">Alamat : </label>
+                  <input #address type="text" class="form-control" name="address" id="address"
+                        placeholder="Masukkan Alamat" value="" required>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-group">
+                  <label for="gender">Jenis Kelamin : </label>
+                  <label>
+                    <input #gender type="radio" name="gender" id="gender" value="M">
+                    <span class="label">Pria</span>
+                  </label>
+                  <label>
+                    <input #gender type="radio" name="gender" id="gender" value="F" >
+                    <span class="label">Wanita</span>
+                  </label>
+                </div>
+            </div>
+            <div class="col-12">
+              <div class="text-right">
+                <button class="btn btn-primary w-100 mt-2" (click)="registration()" type="button">DAFTAR </button>
+                <a href="" [routerLink]="['/login']">Login</a>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+```
+
+```js
+import { Component, OnInit, ViewChild,ElementRef,AfterViewInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import {catchError, first, retry} from 'rxjs/operators';
+import { Router, ActivatedRoute } from '@angular/router';
+import { User } from '../../entity/user';
+import { map } from 'rxjs/operators';
+import { environment} from "../../../environments/environment";
+import { Loginservice} from '../../integration/service/loginService';
+
+@Component({
+  selector: 'app-registration',
+  templateUrl: './registration.component.html',
+  styleUrls: ['./registration.component.css']
+})
+
+export class RegistrationComponent implements OnInit {
+
+  @ViewChild('username') inputUsername : ElementRef;
+  @ViewChild('password') inputpassword : ElementRef;
+  @ViewChild('email') inputemail : ElementRef;
+  @ViewChild('address') inputaddress : ElementRef;
+  @ViewChild('gender') inputgender : ElementRef;
+
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    private loginService: Loginservice) {
+  }
+
+  ngOnInit(): void {}
+
+  registration(){
+
+    let username = this.inputUsername.nativeElement.value;
+    let password = this.inputpassword.nativeElement.value;
+    let email = this.inputemail.nativeElement.value;
+    let address = this.inputaddress.nativeElement.value;
+    let gender = this.inputgender.nativeElement.value;
+
+    let payload = {
+        "payload":{
+          "username": username,
+          "password" : password,
+          "email": email,
+          "address": address,
+          "gender": gender
+        },
+        "header":{
+          "requestId":"test",
+          "requestDS":"test",
+          "session":"test",
+          "uName":"test",
+          "command":"test"
+        }
+    };
+    console.log('ISI PAYLOAD ' + JSON.stringify(payload));
+    this.loginService.registration(JSON.stringify(payload)).
+        pipe(first()).subscribe(data => {
+            console.log('ISI DATA ' + data);
+            if (data.header.responseCode == '00' ){
+                this.router.navigate(['/login']);
+            }
+        },error => {
+            console.log('error : ', error);
+        });
+    }
+
+}
+```
+
+### COMPONENT TEMPLATE LOGIN
+
+After creating the login component and registration component, we will combine them into one login template component by creating a module and a routing module. Here, we will create routing /login and /registration.
+
+`Template Login`
+
+<Image
+  src="/images/post11_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+```js
+import { Routes } from '@angular/router'
+import { LoginComponent } from '../../login/login.component'
+import { RegistrationComponent } from '../../registration/registration.component'
+
+export const TemplateloginRoutingModule: Routes = [
+  { path: 'login', component: LoginComponent },
+  { path: 'registartion', component: RegistrationComponent }
+]
+```
+
+Don’t forget to declare the Login Component in templatelogin.module.ts.
+
+```js
+import { NgModule } from '@angular/core'
+import { CommonModule } from '@angular/common'
+import { RouterModule } from '@angular/router'
+import { TemplateloginRoutingModule } from './templatelogin-routing.module'
+import { LoginComponent } from '../../login/login.component'
+
+@NgModule({
+  declarations: [LoginComponent],
+  imports: [CommonModule, RouterModule.forChild(TemplateloginRoutingModule)]
+})
+export class TemplateloginModule {}
+```

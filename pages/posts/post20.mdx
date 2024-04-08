@@ -1,0 +1,142 @@
+---
+title: Integrating Jenkins Pipeline Job with GitLab Using Jenkinsfile — Learning Jenkins
+date: 2024/1/24
+description: Tutorial on Integrating Jenkins Pipeline Job with GitLab Using Jenkinsfile
+tag: Jenkins, Gitlab
+author: You
+---
+
+import Image from 'next/image'
+
+# Integrating Jenkins Pipeline Job with GitLab Using Jenkinsfile — Learning Jenkins
+
+### INTRODUCTION
+
+In the previous tutorial, we integrated Jenkins pipeline with SonarQube + Node.js & pushed the image to Docker Hub using a pipeline script. Now, we will use a Jenkins file as a replacement for the Jenkins pipeline script. This makes it easier for us. if there are changes in the pipeline script, we don’t need to go into Jenkins. Just modify the script in the Jenkinsfile.
+
+### SETUP SSH KEY
+
+Generate SSH key pair (public and private) to be added to both Jenkins and GitLab for connection during code pull.
+
+```js
+ssh-keygen
+```
+
+`SSH Keygen`
+
+<Image
+  src="/images/post20_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### SETUP SSH GITLAB
+
+Create deploy keys on GitLab. Copy the SSH public key and add it to the key parameter.
+
+`SSH Gitlab`
+
+<Image
+  src="/images/post20_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### SETUP SSH JENKINS
+
+Add credentials to Jenkins. Copy the SSH private key and add it to the key parameter.
+
+`Gitlab Credentials`
+
+<Image
+  src="/images/post20_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+###CONGIURE JENKINS
+
+Change from “Pipeline script” to “Pipeline script from SCM” in Jenkins configuration. In the script path parameter, add the root file path of the Jenkinsfile.
+
+`Configure Jenkins`
+
+<Image
+  src="/images/post20_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### ADD JENKINSFILE
+
+Add a Jenkinsfile to our repository. Simply copy the pipeline script from the previous Jenkins file. In the Jenkinsfile script, there’s no need to add a code pull script.
+
+`Pipeline Script`
+
+```js
+pipeline{
+environment {
+registry = "arramsyah/docker-rest-api-app"
+registryCredential = 'cf0e37c1-bb1f-4cee-a617-561868f13486'
+dockerImage = ''
+}
+agent any
+   stage("Sonarqube Analysis") {
+          environment {
+    SCANNER_HOME = tool 'sonarqube'  // sonar-scanner is the name of the tool in the manage jenkins> tool configuration
+   }
+   steps {
+    withSonarQubeEnv(installationName: 'sonarqube') {  //installationName is the name of sonar installation in manage jenkins>configure system
+     bat "%SCANNER_HOME%/bin/sonar-scanner \
+     -Dsonar.projectKey=node-api-testing \
+     -Dsonar.token=sqp_4239b0abadae0ed7a4712e4eac5a8e03b94e1762 \
+     -Dsonar.sources=. \
+     -Dsonar.host.url=http://localhost:9000 \
+     -Dsonar.inclusions=index.js \
+     -Dsonar.test.inclusions=index.test.js "
+    }
+   }
+        }
+        stage('Building Image') {
+            steps{
+                script {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
+            }
+        }
+        stage('Push Image') {
+            steps{
+                script {
+                    docker.withRegistry( '', registryCredential ) {
+                    dockerImage.push()
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+BUILD PIPELINE
+
+`Jenkins Pipeline`
+
+<Image
+  src="/images/post20_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
