@@ -137,6 +137,17 @@ date: 2021-03-19
   className="next-image"
 />
 
+`Queue Information Page`
+
+<Image
+  src="/images/DummyClinic/queue information.png"
+  alt="Photo"
+  width={1125}
+  height={750} 
+  priority
+  className="next-image"
+/>
+
 `Consultation Page`
 
 <Image
@@ -196,17 +207,6 @@ date: 2021-03-19
 
 <Image
   src="/images/DummyClinic/purchase medicine.png"
-  alt="Photo"
-  width={1125}
-  height={750}
-  priority
-  className="next-image"
-/>
-
-`Queue Information Page`
-
-<Image
-  src="/images/DummyClinic/queue information.png"
   alt="Photo"
   width={1125}
   height={750}
