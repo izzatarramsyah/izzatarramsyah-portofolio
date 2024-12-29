@@ -224,3 +224,64 @@ date: 2021-03-19
   priority
   className="next-image"
 />
+
+# Portofolio
+
+## Marketplace, Dashboard & Accounting 
+
+**Description** : Web application for a cooperative marketplace that supports multi-role access (User, Admin, and Seller) with a dedicated dashboard for each role. The application also integrates seamlessly with an accounting system for real-time transaction tracking.
+
+**Stack** : 
+- Frontend: Vue JS, Codeigniter 3
+- Backend: Laravel
+- Database: MySQL
+- Payment Gateway: Xendit, QRIS, PPOB payment gateway
+
+**Feature** : 
+
+- User: Browse products, add to cart, and complete transactions.
+- Admin: Manage users, products, and marketplace operations.
+- Seller: Manage product listings, inventory, and orders.
+- Seamless payment processing for all transactions.
+- Support for payment via credit card, e-wallet, and QRIS.
+- Redesigned UI/UX based on user requirements to improve usability.
+- Automated logging of every transaction into the accounting system.
+- Support for balance sheet and financial reporting.
+- Generate financial and operational reports for admin and sellers.
+
+**URL** : https://dashboard.rkicoop.co.id/dashboard
+
+**Review** : 
+
+`Accounting`
+
+<Image
+  src="/images/RKI/accounting.png"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Home Page`
+
+<Image
+  src="/images/RKI/home.png"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Dashboard`
+
+<Image
+  src="/images/RKI/dashboard.png"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
