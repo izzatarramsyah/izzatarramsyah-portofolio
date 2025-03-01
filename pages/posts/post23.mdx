@@ -26,7 +26,7 @@ public static void main(String[] args) {
 Circle
 ```
 
-But what if we want to assign a value to a variable\?
+But what if we want to assign a value to a variable ? 
 
 ```js
 String circle = object.get(0);
@@ -38,7 +38,7 @@ If we look at that code, it will result in an error. The error occurs because th
 String circle = (String) object.get(0);
 ```
 
-But what if our code continues to grow and this happens in many lines of code\? This would certainly make things difficult. The solution to the problem above is to use Generics. What we need to do is define the data type of the List object.
+But what if our code continues to grow and this happens in many lines of code ? This would certainly make things difficult. The solution to the problem above is to use Generics. What we need to do is define the data type of the List object.
 
 ```js
 public static void main(String[] args) {
@@ -115,7 +115,7 @@ The use of wildcards provides us with flexibility in handling parameter types wi
 
 UNBOUNDED WILDCARDS
 
-It is used when we do not need to impose any specific type constraints by using the keyword <\?>.
+It is used when we do not need to impose any specific type constraints by using the keyword < ? >.
 
 ```js
 public static void main(String[] args) {
@@ -125,7 +125,7 @@ public static void main(String[] args) {
         printList(numbers);
     }
 
-    public static void printList(List<\?> list) {
+    public static void printList(List< ? > list) {
         for (Object elem : list) {
             System.out.println(elem);
         }
@@ -137,7 +137,7 @@ apple banana pear
 1 5 7
 ```
 
-As seen in the code above, List<\?> can accept a List containing any data type.
+As seen in the code above, List< ? > can accept a List containing any data type.
 
 2. UPPER BOUNDED WILDCARDS
 
@@ -222,7 +222,7 @@ public class JacketItem extends ClothingItem {
 Item purchased: shirt, price: 10
 ```
 
-In the method checkoutAllItems(List<\? extends ClothingItem> clothingItems), the parameter clothingItems is a List with an upper bound of ClothingItem. This means the list can contain ClothingItem or its subtypes (such as ShirtItem or JacketItem). This is very useful when we want to perform operations on a collection of elements that are all subclasses of a specific type.
+In the method checkoutAllItems(List< ?  extends ClothingItem> clothingItems), the parameter clothingItems is a List with an upper bound of ClothingItem. This means the list can contain ClothingItem or its subtypes (such as ShirtItem or JacketItem). This is very useful when we want to perform operations on a collection of elements that are all subclasses of a specific type.
 
 3. LOWER BOUNDED WILDCARDS
 
@@ -243,13 +243,13 @@ public class ClohtingSite {
         System.out.println("Item purchased: " + item.getName() + ", price: " + item.getPrice());
     }
 
-    static void checkoutAllItems(List<\? extends ClothingItem> clothingItems) {
+    static void checkoutAllItems(List< ?  extends ClothingItem> clothingItems) {
         for (ClothingItem clothingItem : clothingItems) {
             checkoutItem(clothingItem);
         }
     }
 
-    public static void addClothingItems(List<\? super ClothingItem> clothingItems) {
+    public static void addClothingItems(List< ?  super ClothingItem> clothingItems) {
         clothingItems.add(new ShirtItem());
     }
 
@@ -294,4 +294,4 @@ public class ShirtItem extends ClothingItem {
 Item purchased: shirt, price: 10
 ```
 
-In the method addClothingItems(List<\? super ClothingItem> clothingItems), the parameter clothingItems is a List with a lower bound of ClothingItem. This means the list can be of type ClothingItem or its superclasses. This is very useful when we want to add elements to a collection without strict type constraints, as long as all elements are subclasses of Clothing.
+In the method addClothingItems(List< ?  super ClothingItem> clothingItems), the parameter clothingItems is a List with a lower bound of ClothingItem. This means the list can be of type ClothingItem or its superclasses. This is very useful when we want to add elements to a collection without strict type constraints, as long as all elements are subclasses of Clothing.
