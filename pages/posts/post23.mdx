@@ -59,7 +59,7 @@ If we look at the code above, Generics makes our code safer from errors and easi
 
 ### GENERICS METHOD
 
-Generics methods allow us to use different data types as arguments for a method. To declare a Generics method, we need the keyword <T>. This keyword enables the Generics method to return and accept various data types.
+Generics methods allow us to use different data types as arguments for a method. To declare a Generics method, we need the keyword < T >. This keyword enables the Generics method to return and accept various data types.
 
 ```js
 public static void main(String[] args) {
@@ -71,7 +71,7 @@ public static void main(String[] args) {
         System.out.println(numbersList);
     }
 
-    private static <T> List<T> convertArrayToList(T[] array) {
+    private static < T > List< T > convertArrayToList(T[] array) {
         return Arrays.asList(array);
     }
 ```
@@ -81,7 +81,7 @@ public static void main(String[] args) {
 [1, 5, 7]
 ```
 
-For example, in the code above, we have two types of arrays: String and Integer. We want to print each element of these arrays. We can use a Generics method as a way to convert the array to a List so it can be printed in the Main class. List<T> means the method returns a value as a List, while T[] means the method can accept any data type in the form of an array. One benefit of using this Generics method is that we can minimize ClassCastException errors when running the program. Additionally, this Generics method can be used multiple times due to its flexibility.
+For example, in the code above, we have two types of arrays: String and Integer. We want to print each element of these arrays. We can use a Generics method as a way to convert the array to a List so it can be printed in the Main class. List< T > means the method returns a value as a List, while T[] means the method can accept any data type in the form of an array. One benefit of using this Generics method is that we can minimize ClassCastException errors when running the program. Additionally, this Generics method can be used multiple times due to its flexibility.
 
 ### BOUNDED GENERICS METHOD
 
@@ -97,7 +97,7 @@ public static void main(String[] args) {
         System.out.println(numbersList);
     }
 
-    private static <T extends Number> List<T> convertArrayToList(T[] array) {
+    private static <T extends Number> List< T > convertArrayToList(T[] array) {
         return Arrays.asList(array);
     }
 ```
