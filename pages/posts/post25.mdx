@@ -1,0 +1,222 @@
+---
+title: Concurrency in Java — Learning Java
+date: 2025/03/02
+description: Tutorial on Concurrency in Java
+tag: Java, Object Oriented Programming
+author: You
+---
+
+import Image from 'next/image'
+
+# Concurrency in Java — Learning Java
+
+### INTRODUCTION
+
+Concurrency is a fundamental concept in Java that allows multiple threads to run simultaneously, enabling efficient CPU resource utilization and improving the performance of Java applications. Java provides several tools to manage concurrency. Here are some tools related to concurrency in Java:
+
+**THREAD**
+
+Thread is the basic class that is part of concurrency in Java. A thread is an independent execution path within a Java program. Threads allow an application to perform multiple tasks simultaneously (multithreading).
+
+```js
+public class Main {
+    
+    public static void main(String[] args) {
+        ThreadExample threadOne = new ThreadExample();
+        ThreadExample threadTwo = new ThreadExample();
+
+        threadOne.setName("First thread");
+        threadTwo.setName("Second thread");
+
+        threadOne.start();
+        threadTwo.start();
+
+    }
+    
+}
+
+class ThreadExample extends Thread {
+
+    @Override
+    public void run() {
+        for ( int i = 1; i <= 2; i ++) {
+            System.out.println("Print index" + i +" from " + this.getName() + "");
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {}
+        }
+    }
+    
+}
+```
+
+```js
+Print index1 from Second thread
+Print index1 from First thread
+Print index2 from Second thread
+Print index2 from First thread
+```
+
+The code example above shows how we implement the Thread class using extends Thread. As can be seen from the result, both threads run independently.
+
+**RUNNABLE INTERFACE**
+
+The Runnable interface is designed to provide a mechanism for a class to be executed by a thread. In other words, the Runnable interface is used to define the task that will be executed by a thread.
+
+```js
+public class Main {
+    
+    public static void main(String[] args) {
+        ThreadExample threadOne = new ThreadExample();
+        ThreadExample threadTwo = new ThreadExample();
+
+        threadOne.setName("First thread");
+        threadTwo.setName("Second thread");
+
+        threadOne.start();
+        threadTwo.start();
+
+    }
+    
+}
+
+class RunnableExample implements Runnable {
+
+    private String name;
+    
+    public RunnableExample( String name) {
+        this.name = name;
+    }
+
+    @Override
+    public void run() {
+        for ( int i = 1; i <= 2; i ++) {
+            System.out.println("Print index" + i +" from " + name  + "");
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {}
+        }
+    }
+
+}
+```
+
+```js
+Print index1 from First thread
+Print index1 from Second thread
+Print index2 from Second thread
+Print index2 from First thread
+```
+
+The code example above shows how to implement the Runnable interface. In terms of code, there is not much difference from implementing it using extends Thread. However, there is a slight change in the main class because we need to pass an object that implements the Runnable interface: Thread threadOne = new Thread(new RunnableExample("First thread")).
+
+So, which is better: Thread or Runnable interface? It depends on the needs of your application. If we use extends Thread, we cannot extend from another class because Java does not allow multiple inheritance (you cannot subclass from a class other than Thread). This makes the use of extends Thread quite limited.
+
+However, if we use implements Runnable, we can extend from other classes, and we can also implement multiple interfaces. This is helpful if the application we are developing is complex, as it provides more flexibility compared to using extends Thread.
+
+**EXECUTOR SERVICE**
+
+Executor Service provides a more flexible and powerful way to manage threads compared to using Thread or Runnable directly. With Executor Service, we can easily manage the execution of threads.
+
+```js
+public class Main {
+    
+     public static void main(String[] args) {
+        
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.submit(new RunnableInterface());
+        executorService.submit(() -> System.out.println("Hello world from a runnable running in an ExecutorService"));
+
+        executorService.shutdown();
+
+    }
+    
+}
+
+class RunnableInterface implements Runnable {
+
+    @Override
+    public void run() {
+        System.out.println("Hello world from a runnable");
+    }
+    
+}
+```
+
+```js
+Hello world from a runnable
+Hello from a runnable running in an ExecutorService
+```
+
+The code example above is a simple example of Executor Service. If we look at it, the newFixedThreadPool method is used to define the number of threads in the pool. submit is used to assign tasks to the Executor Service, while shutdown is used to stop the Executor Service after all tasks are completed.
+
+**SYNCRONIZED METHODS**
+
+Synchronized Method is used to control access to a method by multiple threads simultaneously. When using a Synchronized Method, only one thread can access the method at a time.
+
+```js
+public class Store {
+    
+    // Make this method a synchronized method
+    static synchronized void purchase(String username, StockChecker stockChecker, int amount) {
+        System.out.println(username + " purchasing " + amount + " item ");
+        int stock = stockChecker.getStock();
+        if(stock - amount < 0) {
+            System.out.println("Not enough stock");
+        } else {
+            stockChecker.updateStock(amount);
+            System.out.println("Transaction from " + username + " Success. " +amount + " items purchased");
+        }
+        System.out.println("Current stock : " + stockChecker.getStock());
+    }
+
+    public static void main(String[] args) {
+        // Create a new StockChecker object
+        StockChecker stockChecker = new StockChecker();
+
+        // Create an ExecutorService with a fixed thread pool of 4 threads
+        ExecutorService executorService = Executors.newFixedThreadPool(5);
+
+        // Submit 4 tasks to the executor service.
+        // In each task you should call the purchase method and pass in 20,
+        // to represent a customer purchasing 20 items.
+        executorService.submit(() -> purchase("user 1", stockChecker, 10));
+        executorService.submit(() -> purchase("user 2",stockChecker, 10));
+        executorService.submit(() -> purchase("user 3",stockChecker, 10));
+
+        // Shut down the executor service.
+        executorService.shutdown();
+    }
+    
+}
+
+class StockChecker {
+    
+    private int stock = 20;
+
+    public int getStock() {
+        return stock;
+    }
+
+    public void updateStock(int amount) {
+        stock -= amount;
+    }
+    
+}
+```
+
+```js
+user 1 want to purchase 10
+Item is in stock
+10 items purchased
+Current stock: 10
+user 3 want to purchase 20
+Not enough stock
+Current stock: 10
+user 2 want to purchase 10
+Item is in stock
+10 items purchased
+Current stock: 0
+```
+
+In the code example above, we create a case study of purchasing an item from a store where only 20 units of the item are left, but 3 users are accessing the purchase feature simultaneously. As seen from the code’s output, User 3 cannot buy 20 units because User 1 has already made a purchase of 10 units. The synchronized void purchase is a Synchronized Method, meaning that the entire method is synchronized, and if one thread is executing the method, other threads must wait.
