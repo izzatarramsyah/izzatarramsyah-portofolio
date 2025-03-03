@@ -1,0 +1,258 @@
+---
+title: Easy Local Setup Kafka, Zookeeper and Spring Boot Integration
+date: 2025/03/02
+description: Tutorial on Redis Easy Local Setup Kafka, Zookeeper and Spring Boot Integration
+tag: Java, Spring Boot, Kafka, Zookeeper
+author: You
+---
+
+import Image from 'next/image'
+
+# Easy Local Setup Kafka, Zookeeper and Spring Boot Integration
+
+### INTRODUCTION
+
+<Image
+  src="/images/post27_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+
+**Apache Kafka** is a distributed message broker platform used to handle data streams in real-time. Kafka enables systems to send and receive data in the form of messages reliably, quickly, and consistently.
+
+Kafka consists of:
+
+- Broker: Kafka servers that store and distribute data.
+- Topic: A logical unit for storing categorized messages. Data in Kafka is stored within topics.
+- Partition: A topic in Kafka can be divided into several partitions to improve performance.
+- Offset: Each message in a partition is assigned a sequence number called an offset. Consumers use offsets to track the messages they have read.
+
+**Producer** is an application responsible for generating and sending messages to Kafka. The producer writes messages to a specific topic in Kafka.
+
+**Consumer** is an application responsible for reading and processing messages from Kafka. The consumer subscribes to one or more Kafka topics and retrieves messages from those topics.
+
+**ZooKeeper** is used by Kafka to manage metadata, cluster configuration, and other coordination tasks within the Kafka ecosystem. Kafka relies on ZooKeeper to determine which brokers are in the cluster, and if any broker fails, ZooKeeper will notify the other brokers.
+
+In the latest version of Kafka (Kafka 2.8), Kafka has started transitioning from using ZooKeeper to Kafka Raft Metadata (KRaft). This is an effort by Kafka to reduce its dependency on ZooKeeper. We will discuss this further in the next article.
+
+### PREREQUESITE
+
+- JDK 17 Up
+- IDE : Visual Studio Code
+- Apache Kafka
+- Zookeper
+- Docker installed on your machine
+- Basic Java & REST API knowladge
+
+### CONFIGURATION
+
+The next step you need is to set up Apache Kafka and ZooKeeper. Create a docker-compose.yml file and configure it as shown below.
+
+```js
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/bitnami/zookeeper
+
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_LOG_DIRS=/bitnami/kafka/data
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+```
+
+Basically, in the Docker Compose configuration above, there are 2 services that we use: ZooKeeper and Kafka. We map the ZooKeeper port 2181 and the Kafka port 9092 between the local machine port and the container port.
+
+After that, run this command in the same path as your docker compose file.
+
+```js
+docker compose up
+```
+
+The next step is to create a Spring Boot application for the producer and consumer.
+
+### PRODUCER APPLICATION
+
+```js
+@Configuration
+@EnableKafka
+public class KafkaConfig {
+    
+    @Value("${spring.kafka.bootstrap-servers}")
+	private String kafkaAddress;
+	
+	@Bean
+	public ProducerFactory<String, String> producerFactory() {
+		Map<String, Object> configProps = new HashMap<>();
+		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
+		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		return new DefaultKafkaProducerFactory<>(configProps);
+	}
+
+	@Bean
+	public KafkaTemplate<String, String> kafkaTemplate() {
+		return new KafkaTemplate<>(producerFactory());
+	}
+    
+}
+```
+
+```js
+public interface ProducerService {
+
+	void sendMessage(String msg);
+
+}
+
+@Service
+public class ProducerServiceImpl implements ProducerService {
+
+	@Autowired
+	private KafkaTemplate<String, String> kafkaTemplate;
+
+	private static final String KAFKA_PRODUCER_TOPIC = "test-topic";
+
+	@Override
+	public void sendMessage(String msg) {
+		kafkaTemplate.send(KAFKA_PRODUCER_TOPIC, msg);
+	}
+
+}
+```
+
+```js
+@RestController
+@RequestMapping("/api")
+public class ProducerController {
+    
+    private final Logger LOG = LogManager.getLogger();
+
+    @Autowired
+    private ProducerService producerService;
+
+    @RequestMapping(value = "/sendMessage", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public String sendMessage () {
+        LOG.info("Starting send message");
+		for (int i = 0; i < 10; i++) {
+			producerService.sendMessage(String.format("[%d] -- Message From Producer", i));
+		}
+        LOG.info("Message sent");
+        return "Message sent to Kafka";
+    }
+
+}
+```
+### CONSUMER APPLICATION
+
+```js
+@EnableKafka
+@Configuration
+public class KafkaConfig {
+
+	@Value("${spring.kafka.bootstrap-servers}")
+	private String kafkaAddress;
+
+	@Value("${spring.kafka.consumer.group-id}")
+	private String groupId;
+
+	@Bean
+	public ConsumerFactory<String, String> consumerFactory() {
+		Map<String, Object> props = new HashMap<>();
+		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
+		props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		return new DefaultKafkaConsumerFactory<>(props);
+	}
+
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+		factory.setConsumerFactory(consumerFactory());
+		return factory;
+	}
+}
+```
+
+```js
+@Component
+public class KafkaConsumerListener {
+    
+	private static final String KAFKA_PRODUCER_TOPIC = "test-topic";
+
+	private static final String KAFKA_GROUPID = "consumer-group";
+
+    @KafkaListener(topics = KAFKA_PRODUCER_TOPIC, groupId = KAFKA_GROUPID)
+	public void listen(String message) {
+		System.out.println(String.format("Received Messasge: [%s] ", message));
+	}
+
+}
+```
+
+### RUNNING APPLICATION
+
+Run the producer and consumer applications. Then hit the /sendMessage API from the producer.
+
+```js
+mvn clean package spring-boot:run -DskipTests
+```
+
+### RESULT
+
+<Image
+  src="/images/post27_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post27_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post27_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
