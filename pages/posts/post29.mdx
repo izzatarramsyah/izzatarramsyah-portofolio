@@ -1,0 +1,31 @@
+---
+title: CI/CD for Spring Boot Deployment on EC2
+date: 2025/03/02
+description: Tutorial on CI/CD for Spring Boot Deployment on EC2
+tag: Java, Spring Boot, AWS
+author: You
+---
+
+import Image from 'next/image'
+
+CI/CD for Spring Boot Deployment on EC2
+
+###INTRODUCTION
+
+In this modern era, CI/CD is an essential part of application development to automate the build, testing, and deployment processes. With CI/CD, developers can significantly reduce manual errors that typically occur during deployment. Additionally, CI/CD allows for faster application updates. In this article, we will walk through the process of deploying an application using GitLab CI/CD and deploying it to an EC2 instance.
+
+### PREREQUISITES
+- AWS EC2 Instance: Set up an AWS EC2 Instance as a VPS to deploy the application.
+- Docker: Install Docker on the AWS EC2 Instance to handle pulling and running the application.
+- GitLab: For repository management and CI/CD.
+- SSH Key: To access the EC2 instance securely.
+
+### Set Up EC2 Instance
+To deploy the application, you need to create an EC2 instance first.
+
+- Login to AWS Console.
+- Launch a New Instance.
+- Configure the instance. Allow SSH access on port 22.
+- Create a New Key Pair. This will generate a .pem key.
+- Launch the Instance.
+- Connect to the EC2 Instance via SSH

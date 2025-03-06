@@ -10,7 +10,11 @@ date: 2021-03-19
 
 **Description** : Web Application for Growth Monitoring According Z Score WHO Study Case
 
-**Stack** : Java Spring Boot, Angular, PostgreSQL
+**Stack** :
+
+- Frontend: Angular
+- Backend: Spring Boot
+- Database: PostgreSQL
 
 **Feature** : 
 
