@@ -10,11 +10,11 @@ import Image from 'next/image'
 
 Spring Boot and Apache Kafka Integration 
 
-**The Role of Kafka in Tikceting System**
+### The Role of Kafka in Tikceting System
 
 Apache Kafka is widely used in ticket booking systems to support asynchronous and real-time processing, which is essential for large-scale systems with numerous users. Kafka helps ensure smooth operations, scalability, and reliability in handling ticket transactions.
 
-**Challenges in Ticketing System**
+### Challenges in Ticketing System
 
 Implementing a ticket booking system comes with several challenges, including:
 
@@ -22,7 +22,7 @@ Implementing a ticket booking system comes with several challenges, including:
 - Data Consistency: The system must ensure that tickets are not overbooked and that availability is accurately reflected.
 - Service Integration: A ticket booking system typically involves multiple services, such as payment processing, ticket inventory management, and user notifications. Kafka helps in integrating these services efficiently.
 
-**Kafka Role in Tikceting System**
+### Kafka Role in Tikceting System 
 
 Kafka facilitates communication between various services by using topics to organize and manage event-driven data. The key Kafka topics used in the system are:
 
@@ -31,7 +31,7 @@ Kafka facilitates communication between various services by using topics to orga
 - notification-topic: Contains transaction status for both orders and payments (e.g., PENDING, CONFIRMED, CANCELED, COMPLETED).
 Ticketing System Flow
 
-**The ticket booking process follows these key steps:**
+### The ticket booking process follows these key steps 
 
 Client Request: The user submits a ticket booking request.
 Producing Message: The frontend sends a Kafka message to the orders-topic.
@@ -51,7 +51,7 @@ The system consists of several key components that work together to ensure seaml
 - Payment Service: Processes payments.
 - Notification Service: Sends notifications to users
 
-**Key Components and Listeners**
+### Key Components and Listeners 
 
 **Order Controller**
 
@@ -153,7 +153,7 @@ Handles incoming response from payment gateway and send messege to kafka.
     }
 ```
 
-** ProducerOrder **
+**ProducerOrder** 
 
 Produces messages to Kafka topics, specifically handling order requests.
 
@@ -193,7 +193,7 @@ public String confirmOrder(Order orderRequest, String paymentMethod) {
     }
 ```
 
-**OrderListener**
+**OrderListener** 
 
 Consumes messages from the orders-topic and processes ticket bookings.
 
@@ -256,7 +256,7 @@ Consumes messages from the orders-topic and processes ticket bookings.
     }
 ```
 
-**PaymentListener**
+**PaymentListener** 
 
 Listens for payment-related messages from the payment-topic and initiates transactions.
 
@@ -294,7 +294,7 @@ Listens for payment-related messages from the payment-topic and initiates transa
     }
 ```
 
-**Notification Listener**
+**Notification Listener** 
 
 Listens for status updates from the notification-topic and triggers user notifications.
 
@@ -312,9 +312,9 @@ Listens for status updates from the notification-topic and triggers user notific
     }
 ```
 
-**Testing**
+###Testing 
 
-Order Ticket API Request
+**Order Ticket API Request**
 
 ```js
 {
@@ -332,7 +332,7 @@ Order Ticket API Request
 }
 ```
 
-Order Ticket API Response
+**Order Ticket API Response**
 
 ```js
 {
@@ -346,7 +346,7 @@ Order Ticket API Response
 }
 ```
 
-Webhook API
+**Webhook API**
 
 ```js
 {
@@ -362,7 +362,7 @@ Webhook API
 }
 ```
 
-**Result**
+###Result
 
 <Image
   src="/images/post28_img1.webp"
@@ -382,6 +382,6 @@ Webhook API
   className="next-image"
 />
 
-**Conclusion**
+### Conclusion### 
 
 By leveraging Kafka’s capabilities, the ticket booking system can efficiently manage high volumes of transactions, maintain data consistency, and integrate various services seamlessly. Kafka’s event-driven architecture ensures scalability and responsiveness, making it an ideal solution for modern ticketing applications.
