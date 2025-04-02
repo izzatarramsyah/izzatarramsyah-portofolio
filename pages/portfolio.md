@@ -6,15 +6,15 @@ date: 2021-03-19
 
 # Portofolio
 
-## Growth Monitoring Application
+## 0-2 Years Old Growth Monitoring Web Application 
 
-**Description** : Web Application for Growth Monitoring According Z Score WHO Study Case
+**Description** : Web Application for Growth Monitoring According Z Score WHO
 
 **Stack** :
 
-- Frontend: Angular
-- Backend: Spring Boot
-- Database: PostgreSQL
+- Frontend : Angular
+- Backend : Spring Boot
+- Database : PostgreSQL
 
 **Feature** : 
 
@@ -22,7 +22,7 @@ date: 2021-03-19
 - Input Data Vaccine and Medical Record
 - Generate Vaccine and Medical Schedule and Report
 - Show Grapic of Growth based on Weight, Height and Head Diameter
-- Send SMS/Whatsapp Vaccine and Medical Checking Reminder by Scheduler
+- Send SMS or Whatsapp Vaccine and Medical Checking Reminder by Scheduler
 
 **Review** : 
 
@@ -103,44 +103,27 @@ date: 2021-03-19
   className="next-image"
 />
 
-# Portofolio
+## Marketplace Web Application for Cooperative
 
-## Marketplace Application
-
-**Description** : Web application for a cooperative marketplace that supports multi-role access (User, Admin, and Seller) with a dedicated dashboard for each role. The application also integrates seamlessly with an accounting system for real-time transaction tracking.
+**Description** : Web application for a cooperative marketplace that supports multi-role access (User, Admin, Seller and Cooperative) with a dedicated dashboard for each role.
 
 **Stack** : 
-- Frontend: Vue JS, Codeigniter 3
-- Backend: Laravel
-- Database: MySQL
-- Payment Gateway: Xendit, QRIS, PPOB payment gateway
+- Frontend : Laravel + Vue JS
+- Backend : Laravel
+- Database : MySQL
 
 **Feature** : 
 
-- User: Browse products, add to cart, and complete transactions.
-- Admin: Manage users, products, and marketplace operations.
-- Seller: Manage product listings, inventory, and orders.
-- Seamless payment processing for all transactions.
-- Support for payment via credit card, e-wallet, and QRIS.
-- Redesigned UI/UX based on user requirements to improve usability.
+- User : Browse products, add to cart, and complete transactions.
+- Admin : Manage users, products, digital products (PPOB) and marketplace operations.
+- Seller : Manage product listings including digital products (PPOB), inventory, and orders.
+- Cooperative : Manage seller account including product listings and digital products (PPOB), inventory and orders
+- Payment integration using Xendit, QRIS, and other Payment Gateway Provider ( DDT & Jatelindo )
 - Automated logging of every transaction into the accounting system.
-- Support for balance sheet and financial reporting.
-- Generate financial and operational reports for admin and sellers.
 
 **URL** : https://dashboard.rkicoop.co.id/dashboard
 
 **Review** : 
-
-`Accounting`
-
-<Image
-  src="/images/RKI/accounting.png"
-  alt="Photo"
-  width={1125}
-  height={750}
-  priority
-  className="next-image"
-/>
 
 `Home Page`
 
@@ -153,10 +136,37 @@ date: 2021-03-19
   className="next-image"
 />
 
-`Dashboard`
+`User Dashboard`
 
 <Image
   src="/images/RKI/dashboard.png"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+## Accounting Web Application for Cooperative
+
+**Description** : Web application for a cooperative marketplace accountant to check transaction reporting. Web integrates seamlessly with an accounting system for real-time transaction tracking.
+
+**Stack** : 
+- Frontend & Backend : Codigniter 3
+- Database : MySQL
+
+**Feature** : 
+
+- Generate sales and purchasing activities, financial and operational reports for admin, sellers and cooperative for accountant.
+
+**URL** : https://accounting.troli.co.id/login (User Login Required)
+
+**Review** : 
+
+`Accounting`
+
+<Image
+  src="/images/RKI/accounting.png"
   alt="Photo"
   width={1125}
   height={750}
