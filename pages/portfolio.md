@@ -149,7 +149,7 @@ date: 2021-03-19
 
 ## Accounting Web Application for Cooperative
 
-**Description** : Web application for a cooperative marketplace accountant to check transaction reporting. Web integrates seamlessly with an accounting system for real-time transaction tracking.
+**Description** : Web application for a cooperative marketplace accountant to check transaction reporting. Web integrates with Marketplace Web Application seamlessly for real-time transaction tracking.
 
 **Stack** : 
 - Frontend & Backend : Codigniter 3
@@ -157,7 +157,7 @@ date: 2021-03-19
 
 **Feature** : 
 
-- Generate sales and purchasing activities, financial and operational reports for admin, sellers and cooperative for accountant.
+- Generate sales and purchasing activities, financial and operational reports for sellers and cooperative.
 
 **URL** : https://accounting.troli.co.id/login (User Login Required)
 
