@@ -1,0 +1,143 @@
+---
+title: Containerizing Golang Applications — Learning Golang
+date: 2024/1/24
+description: Tutorial on Containerizing Golang Applications
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Containerizing Golang Applications — Learning Golang
+
+### INTRODUCTION
+
+Before we start creating a Golang application container, it’s good to know what Docker is and the terms used in Docker. For more details, please click here.
+
+### PREREQUISITE
+
+As an [example project](https://github.com/izzatarramsyah/ProjectLogin-GOLANG), please clone the GO application I have created.
+
+Please download and install Docker Desktop or use the Docker command. For simplicity, we will use Docker Desktop here.
+
+### CREATING DOCKER IMAGE
+
+A Docker image contains everything needed for an application to run. To create a Docker image, we need to configure step by step how our application can run by creating a Dockerfile.
+
+First, we need to initialize the GO application using Go Module. This feature makes it easy for us to initialize the application without having to pay attention to the GO PATH. Besides, it makes it easy for us if there are dependencies in the required application. So we don’t need to download them one by one.
+
+Open the terminal, then go to the folder and run the following command.
+
+```js
+go mod init github.com/izzatarramsyah/ProjectLogin-GOLANG
+```
+
+Then a go.mod file will be created. Please copy the package name (github.com/izzatarramsyah/ProjectLogin-GOLANG) in the go.mod file and replace it in every go file that previously used a local folder to import the package.
+
+`go.mod`
+
+<Image
+  src="/images/post7_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`main.go`
+
+<Image
+  src="/images/post4_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Automatically, a sum.go file will be created. This file contains the dependencies/libraries needed to run our application.
+
+Next, we will create a Dockerfile. This Dockerfile contains step-by-step configurations needed to run our application.
+
+Next, we will build and run the Docker image. Run the following command to create a Docker image.
+
+```js
+FROM golang:latest
+
+LABEL maintener = "Izzat <arramsyah@gmail.com>"
+
+WORKDIR /app
+
+COPY go.mod .
+
+COPY go.sum .
+
+RUN go mod download
+
+COPY . .
+
+EXPOSE 8080
+
+RUN go build
+
+CMD ["./ProjectLogin-GOLANG"]
+```
+
+Next, we will build and run the Docker image. Run the following command to create a Docker image.
+
+```js
+docker build -t projectlogin-golang  .
+```
+
+If successful, type the following command to check the newly created Docker image.
+
+```js
+docker image
+```
+
+`Docker Image`
+
+<Image
+  src="/images/post7_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+If the Docker image has been created, next, we try to run the Docker image with the following command. Or we can also run the Docker image directly through Docker Desktop. The Docker image that has been created will automatically appear on Docker Desktop.
+
+```js
+docker run -p 8080:8080 projectlogin-golang
+```
+
+### RESULT
+
+To see the results, here I test hitting the API and checking on the Docker Desktop application because it’s easier and has log features as well.
+
+- Test Hit API by Postman
+- Logs on Docker Desktop
+
+`Postman Result`
+
+<Image
+  src="/images/post7_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Docker Dekstop`
+
+<Image
+  src="/images/post7_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

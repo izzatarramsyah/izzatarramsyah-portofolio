@@ -1,0 +1,382 @@
+---
+title: Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part2 — Learning Java
+date: 2024/1/24
+description: Tutorial on Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part2
+tag: Spring Boot
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part2 — Learning Java
+
+### INTRODUCTION
+
+After the previous article where we set up the project and configured the Spring Boot connection with the JBoss Server, now we move on to creating a simple REST API using Spring Boot.
+
+### PROJECT STRUCTURE
+
+As usual, I will create a project structure based on the DAO, Service, and Controller layers. Briefly, this article will only discuss these three main layers.
+
+`Project Structure`
+
+<Image
+  src="/images/post10_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### DAO Layer
+
+This layer is used to access queries from Spring Boot to Oracle/Database. As briefly explained in the previous article, in the DAO Class, we use the PreparedStatement function to execute queries. In the insert method, the executeUpdate function is commonly used to execute Insert or Update queries. The resultSet function is usually used for Select queries to extract rows of query results.
+
+### Interface Dao Class
+
+```js
+package com.clinic.user.dao;
+
+import com.clinic.user.config.DBConnection;
+import com.clinic.user.entity.User;
+
+public interface UserDao {
+
+	boolean addNewUser(DBConnection cn, User user) throws Exception;
+	User getUser (DBConnection cn, String username, String password) throws Exception;
+
+}
+```
+
+```js
+package com.clinic.user.dao.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Repository;
+import com.clinic.user.config.DBConnection;
+import com.clinic.user.dao.UserDao;
+import com.clinic.user.entity.User;
+
+import java.sql.Timestamp;
+import java.util.Date;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
+@Repository
+public class UserDaoImpl implements UserDao{
+
+	private static final Logger LOG = LogManager.getLogger(UserDaoImpl.class);
+
+	public static final String ADD_USER = "INSERT INTO TBL_USER (USERNAME, PASSWORD, EMAIL, JOIN_DATE, STATUS, ADDRESS, GENDER, STATUS_ACCOUNT, CREATED_DTM, CREATED_BY, LASTUPD_DTM, LASTUPD_BY) "+
+			" VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ";
+
+	public static final String GET_USER_BY_USERNAME_PASSWORD = "SELECT ID, USERNAME, PASSWORD, EMAIL, JOIN_DATE, DELETE_DATE, STATUS, ADDRESS, GENDER, SESSION_ID, STATUS_ACCOUNT, LAST_ACTIVITY, CREATED_DTM, CREATED_BY, LASTUPD_DTM, LASTUPD_BY FROM TBL_USER WHERE USERNAME = ? AND PASSWORD = ?";
+
+	private static Timestamp getCurrentTimeStamp() {
+	    Date today = new Date();
+	    return new Timestamp(today.getTime());
+	}
+
+	@Override
+	public boolean addNewUser(DBConnection cn,User user) throws Exception {
+		LOG.traceEntry();
+		LOG.debug("SQL::{}||{}", ADD_USER, user);
+		int result = 0;
+		try{
+			cn.pr = cn.connection.prepareStatement(ADD_USER);
+			cn.pr.setString(1, user.getUsername());
+			cn.pr.setString(2, user.getPassword());
+			cn.pr.setTimestamp(3, getCurrentTimeStamp());
+			cn.pr.setString(4, user.getStatus());
+			cn.pr.setString(5, user.getAddress());
+			cn.pr.setString(6, user.getGender());
+			cn.pr.setString(7, user.getStatusAccount());
+			cn.pr.setTimestamp(8, getCurrentTimeStamp());
+			cn.pr.setString(9, user.getCreatedBy());
+			cn.pr.setTimestamp(10, getCurrentTimeStamp());
+			cn.pr.setString(11, user.getLastUpdBy());
+			result = cn.pr.executeUpdate();
+
+		}catch (Exception e){
+			LOG.error("ERR :: {}", e.getMessage());
+		}finally{
+			cn.closeStatement();
+		}
+		LOG.debug("RESULT::{}", result);
+		LOG.traceExit();
+
+		return result == 0 ? false : true;
+	}
+
+	@Override
+	public User getUser(DBConnection cn, String username, String password) throws Exception {
+		LOG.traceEntry();
+		LOG.debug("SQL::{}||{}", GET_USER_BY_USERNAME_PASSWORD, username);
+		User result = new User();
+		try{
+			cn.pr = cn.connection.prepareStatement(GET_USER_BY_USERNAME_PASSWORD);
+			cn.pr.setString(1, username);
+			cn.pr.setString(2, password);
+			cn.rs = cn.pr.executeQuery();
+			while (cn.rs.next()) {
+				result.setId(cn.rs.getLong("ID"));
+				result.setUsername(cn.rs.getString("USERNAME"));
+				result.setPassword(cn.rs.getString("PASSWORD"));
+				result.setEmail(cn.rs.getString("EMAIL"));
+				result.setJoinDate(cn.rs.getDate("JOIN_DATE"));
+				result.setStatus(cn.rs.getString("STATUS"));
+				result.setAddress(cn.rs.getString("ADDRESS"));
+				result.setGender(cn.rs.getString("GENDER"));
+				result.setSessionId(cn.rs.getString("SESSION_ID"));
+				result.setLastActivity(cn.rs.getDate("LAST_ACTIVITY"));
+				result.setStatusAccount(cn.rs.getString("STATUS_ACCOUNT"));
+				result.setCreatedBy(cn.rs.getString("CREATED_BY"));
+				result.setCreatedDtm(cn.rs.getDate("CREATED_DTM"));
+				result.setLastUpdBy(cn.rs.getString("LASTUPD_BY"));
+				result.setLastUpdDtm(cn.rs.getDate("LASTUPD_DTM"));
+			}
+		}catch (Exception e){
+			LOG.error("ERR :: {}", e.getMessage());
+		}finally{
+			cn.closeStatement();
+		}
+		LOG.debug("RESULT::{}", result);
+		LOG.traceExit();
+		return result;
+	}
+
+}
+```
+
+### Service Layer
+
+```js
+package com.clinic.user.dao;
+
+import com.clinic.user.config.DBConnection;
+import com.clinic.user.entity.User;
+
+public interface UserDao {
+
+	boolean addNewUser(DBConnection cn, User user) throws Exception;
+	User getUser (DBConnection cn, String username, String password) throws Exception;
+
+}
+```
+
+### Service Layer
+
+This layer is generally used for business logic according to the project’s needs. In the Implements Service Class, we call the getConnection function from the DBConnection class to open and close the connection to the database through the DataSource we set up earlier. Here we set autoCommit to false so that if there is a failed insert or update, the data will not be inserted or updated automatically. However, we can create logic here if the insert or update is successful, we will call the Commit function.
+
+```js
+package com.clinic.user.service;
+
+import com.clinic.user.config.DBConnection;
+import com.clinic.user.entity.User;
+
+public interface UserService {
+
+	boolean addNewUser(User user) throws Exception;
+	User getUser (String username, String password) throws Exception;
+
+}
+```
+
+```js
+package com.clinic.user.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.clinic.user.config.DBConnection;
+import com.clinic.user.dao.UserDao;
+import com.clinic.user.entity.User;
+import com.clinic.user.service.UserService;
+
+import java.util.Calendar;
+import java.util.Date;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Service
+public class UserServiceImpl extends DBConnection implements UserService{
+
+	private static final Logger LOG = LogManager.getLogger(UserServiceImpl.class);
+
+	@Autowired
+	UserDao userDao;
+
+	@Override
+	public boolean addNewUser(User user) throws Exception {
+		LOG.traceEntry();
+		DBConnection cn = new DBConnection();
+		boolean result = false;
+		try {
+			cn.connection = getConnection();
+			cn.connection.setAutoCommit(false);
+			result = userDao.addNewUser(cn, user);
+			cn.connection.commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOG.error(e.getMessage(), e);
+			throw new Exception(e);
+		} finally {
+			cn.closeConnection();
+		}
+		LOG.traceExit();
+		return result;
+	}
+
+	@Override
+	public User getUser(String username, String password) throws Exception {
+		LOG.traceEntry();
+		DBConnection cn = new DBConnection();
+		User result = new User();
+		try {
+			cn.connection = getConnection();
+			cn.connection.setAutoCommit(false);
+			result = userDao.getUser(cn, username, password);
+			cn.connection.commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOG.error(e.getMessage(), e);
+			throw new Exception(e);
+		} finally {
+			cn.closeConnection();
+		}
+		LOG.traceExit();
+		return result;
+	}
+
+}
+```
+
+### Controller Layer
+
+This layer can also be used as business logic, but the main function of this Controller is to receive requests, process them, and send responses.
+
+```js
+package com.clinic.user.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.http.MediaType;
+
+import com.clinic.user.bean.APIUserRequest;
+import com.clinic.user.bean.APIResponse;
+import com.clinic.user.bean.HeaderResponse;
+import com.clinic.user.constant.StatusCode;
+import com.clinic.user.entity.User;
+import com.clinic.user.object.Response;
+import com.clinic.user.service.UserService;
+
+@RestController
+@RequestMapping("/user")
+public class UserController extends BaseController {
+
+	private static final Logger LOG = LogManager.getLogger(UserController.class);
+
+	@Autowired
+	UserService userService;
+
+	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public APIResponse login(@RequestBody String input) {
+		LOG.traceEntry();
+		APIResponse response = new APIResponse();
+		StatusCode statusTrx = StatusCode.SUCCESS;
+		String responseMsg = StatusCode.SUCCESS.toString();
+		try{
+			APIUserRequest req = (APIUserRequest) ObjectMapper(input, APIUserRequest.class);
+			LOG.info("REQ::{}", req);
+			User user = userService.getUser(req.getPayload().getUsername(), req.getPayload().getPassword());
+			if ( user != null ) {
+					response.setPayload(new Response("Login Success", user));
+			}else{
+				statusTrx = StatusCode.INVALID;
+				responseMsg = StatusCode.INVALID.toString();
+				response.setPayload(new Response("Username/Password Invalid"));
+			}
+
+		}catch (Exception e){
+			e.printStackTrace();
+			LOG.error("ERR::[{}]:{}", e.getMessage());
+			statusTrx = StatusCode.GENERIC_ERROR;
+			responseMsg = StatusCode.GENERIC_ERROR.toString();
+			response.setPayload(new Response(e.getMessage()));
+		}
+		response.setHeader(new HeaderResponse (statusTrx.getCode(), responseMsg));
+		LOG.debug("RES::[{}]:{}", response);
+		LOG.traceExit();
+		return response;
+	}
+
+	@RequestMapping(value = "/addNewUser", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public APIResponse addUser(@RequestBody String input) {
+		LOG.traceEntry();
+		APIResponse response = new APIResponse();
+		StatusCode statusTrx = StatusCode.SUCCESS;
+		String responseMsg = StatusCode.SUCCESS.toString();
+		try{
+			APIUserRequest req = (APIUserRequest) ObjectMapper(input, APIUserRequest.class);
+			User user = req.getPayload();
+			LOG.info("REQ::{}", req);
+			boolean result = userService.addNewUser(user.getPayload());
+			if (result) {
+				response.setPayload(new Response("Register Success"));
+			}else{
+				statusTrx = StatusCode.INVALID;
+				responseMsg = StatusCode.INVALID.toString();
+				response.setPayload(new Response("Register Failed"));
+			}
+		}catch (Exception e){
+			e.printStackTrace();
+			LOG.error("ERR::[{}]:{}", e.getMessage());
+			statusTrx = StatusCode.GENERIC_ERROR;
+			responseMsg = StatusCode.GENERIC_ERROR.toString();
+			response.setPayload(new Response(e.getMessage()));
+		}
+		response.setHeader(new HeaderResponse (statusTrx.getCode(), responseMsg));
+		LOG.debug("RES::[{}]:{}", response);
+		LOG.traceExit();
+		return response;
+	}
+
+
+}
+
+```
+
+### RESULT
+
+JRun the project on your local server (Right-click on the project -> Run As -> Run on Server -> Choose JBoss EAP 7x) or build the war file (mvn clean install). Then deploy the war file to the JBoss server.
+
+`Postman Test`
+
+<Image
+  src="/images/post10_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Database`
+
+<Image
+  src="/images/post10_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

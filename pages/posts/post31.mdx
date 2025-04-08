@@ -1,0 +1,467 @@
+---
+title: Spring Cloud Gateway with Dynamic Rate Limit using Redis & JWT
+date: 2025/03/02
+description: Tutorial on Spring Cloud Gateway with Dynamic Rate Limit using Redis & JWT
+tag: Java, Spring Boot, AWS
+author: You
+---
+
+import Image from 'next/image'
+
+Spring Cloud Gateway with Dynamic Rate Limit using Redis & JWT
+
+### INTRODUCTION
+
+Spring Cloud Gateway is a Spring Boot-based API Gateway used to handle requests to services within a microservices system. Spring Cloud Gateway is lighter compared to other API Gateways or AWS API Gateway for the Spring Boot ecosystem.
+
+### Main Functions
+- Routing → Forwards requests to the appropriate service.
+- Rate Limiting → Limits the number of requests to a service within a specific time frame.
+- Load Balancing → Distributes incoming traffic across multiple service instances automatically.
+- Authentication & Authorization → Acts as a security gateway before forwarding requests to the target service.
+
+### Create your Spring Cloud Gateway
+- Create a Spring Boot application. You can generate new project at https://start.spring.io/
+
+- Add dependencies in pom.xml
+
+```js
+<!-- Spring Cloud Gateway -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+
+<!-- Load balancer -->
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+</dependency>
+
+<!-- JWY -->
+<dependency>
+     <groupId>io.jsonwebtoken</groupId>
+     <artifactId>jjwt-api</artifactId>
+     <version>0.11.5</version>
+</dependency>
+
+<!-- Redis  -->
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+</dependency>
+```
+
+- Since we will create dynamic routing, we need to create table to store route information
+
+```js
+CREATE TABLE ticketing.gateway_route (
+ id int4 NOT NULL,
+ route_id varchar(50) NULL,
+ "path" varchar(50) NULL,
+ uri varchar(50) NULL,
+ rewrite_path varchar(50) NULL,
+ CONSTRAINT gateway_route_pkey PRIMARY KEY (id)
+);
+```
+
+```js
+@Repository
+public interface GatewayRouteRepository extends JpaRepository<GatewayRoute, Long> {}
+```
+
+- Create RedisConfig, RedisRateLimiterService and CustomRedisRateLimiter (Global Config For Redis Rate Limiter) class
+
+Since we want our API Gateway to dynamically set the maximum number of requests, we need to create this service. Additionally, we use Redis to store our rate limit configuration.
+
+```js
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(ReactiveRedisConnectionFactory factory) {
+        RedisSerializationContext<String, String> serializationContext =
+            RedisSerializationContext.<String, String>newSerializationContext(RedisSerializer.string())
+                .value(RedisSerializer.string())
+                .build();
+
+        return new ReactiveRedisTemplate<>(factory, serializationContext);
+    }
+}
+```
+
+```js
+@Service
+public class RedisRateLimiterService {
+
+    private static final String RATE_LIMIT_PREFIX = "rate_limit:";
+
+    private final ReactiveStringRedisTemplate redisOperations;
+
+    public RedisRateLimiterService(ReactiveStringRedisTemplate redisOperations) {
+        this.redisOperations = redisOperations;
+    }
+    
+    public Mono<Void> setRateLimit(String endpoint, RateLimitConfig config) {
+        String key = RATE_LIMIT_PREFIX + endpoint;
+        String value = config.getReplenishRate() + "," + config.getBurstCapacity();
+        return redisOperations.opsForValue().set(key, value).then();
+    }
+    
+    public Mono<RateLimitConfig> getRateLimit(String endpoint) {
+        String key = RATE_LIMIT_PREFIX + endpoint;
+        return redisOperations.opsForValue().get(key)
+                .map(value -> {
+                    String[] parts = value.split(",");
+                    return new RateLimitConfig(endpoint, Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+                })
+                .defaultIfEmpty(new RateLimitConfig(endpoint, 2, 5)); // Default jika tidak ada di Redis
+    }
+}
+```
+
+```js
+@Component
+public class CustomRedisRateLimiter implements GlobalFilter, Ordered {
+    
+    private static final Logger logger = LoggerFactory.getLogger(CustomRedisRateLimiter.class);
+
+    private static final String RATE_LIMIT_PREFIX = "rate_limit:";
+    private static final String RATE_LIMIT_COUNTER = "rate_limit:counter:";
+
+    private final ReactiveStringRedisTemplate redisTemplate;
+
+    public CustomRedisRateLimiter(ReactiveStringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        String redisKey = RATE_LIMIT_PREFIX + path;
+        String counterKey = RATE_LIMIT_COUNTER + path;
+
+        logger.info("🔍 Processing request for path: {}", path);
+
+        return redisTemplate.opsForValue().get(redisKey)
+            .flatMap(value -> {
+                String[] parts = value.split(",");
+                int replenishRate = Integer.parseInt(parts[0]);
+                int burstCapacity = Integer.parseInt(parts[1]);
+
+                logger.info("🔄 Checking rate limit: Replenish Rate = {}, Burst Capacity = {}", replenishRate, burstCapacity);
+
+                return isAllowed(counterKey, replenishRate, burstCapacity)
+                    .flatMap(allowed -> {
+                        if (allowed) {
+                            logger.info("✅ Request allowed for {}", path);
+                            return chain.filter(exchange);
+                        } else {
+                            logger.warn("❌ Request blocked for {}", path);
+                            return denyRequest(exchange);
+                        }
+                    });
+            })
+            .switchIfEmpty(chain.filter(exchange));
+    }
+
+    private Mono<Boolean> isAllowed(String key, int replenishRate, int burstCapacity) {
+        String redisKey = "rate_limit:counter:" + key;
+    
+        return redisTemplate.opsForValue()
+            .increment(redisKey)
+            .flatMap(count -> {
+                System.out.println("🔥 Incremented key: " + redisKey + " -> Count: " + count);
+                
+                return redisTemplate.opsForValue().get(redisKey)
+                    .flatMap(value -> redisTemplate.getExpire(redisKey))
+                    .flatMap(ttl -> {
+                        if (ttl.isNegative() || ttl.isZero()) { 
+                            return redisTemplate.expire(redisKey, Duration.ofSeconds(1))
+                                .thenReturn(count <= burstCapacity);
+                        }
+                        return Mono.just(count <= burstCapacity);
+                    });
+            })
+            .doOnError(error -> System.err.println("❌ Redis Error: " + error.getMessage()));
+    }
+    
+
+    private Mono<Void> denyRequest(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+        return exchange.getResponse().setComplete();
+    }
+
+    @Override
+    public int getOrder() {
+        return -1; 
+    }
+}
+```
+
+- Create ApiGatewayConfig class for Spring Cloud Gateway configuration
+
+We have already created a global configuration for Redis, so we don’t need to add the Redis filter again in our route locator.
+
+```js
+@Configuration
+public class ApiGatewayConfig {
+
+    private final GatewayRouteRepository routeRepository;
+
+    public ApiGatewayConfig(GatewayRouteRepository routeRepository) {
+        this.routeRepository = routeRepository;
+    }
+
+    @Bean
+    public RouteLocator gatewayRoutes(RouteLocatorBuilder builder, Environment env) {
+        List<GatewayRoute> routes = routeRepository.findAll();
+
+        RouteLocatorBuilder.Builder routeBuilder = builder.routes();
+
+        for (GatewayRoute route : routes) {
+            List<String> instances = Arrays.asList(route.getUri().split(","));
+
+            routeBuilder.route(route.getRouteId(), r -> r
+                    .path(route.getPath())
+                    .filters(f -> f.rewritePath(route.getRewritePath(), "/ticketing-app/${segment}"))
+                    .uri(getRandomInstance(instances)) // Without Service Discovery
+            );
+        }
+
+        return routeBuilder.build();
+    }
+
+    // Select Service Random
+    private String getRandomInstance(List<String> instances) {
+        Random random = new Random();
+        return instances.get(random.nextInt(instances.size())); 
+    }
+
+    // Key Resolver for Rate Limiting by Path
+    @Bean
+    public KeyResolver pathKeyResolver() {
+        return exchange -> Mono.just(exchange.getRequest().getPath().toString());
+    }
+
+}
+```
+
+**Fetching Route List from Repository**
+
+- routeLocator→ This method returns a RouteLocator, which is used by Spring Cloud Gateway to define routing rules.
+- routeId → A unique ID for the route.
+- path → The request path that will be routed (e.g., /api/tickets/**).
+- rewritePath → The new path used in URL Rewriting.
+- uri → The target URI or destination service (it can contain multiple instances separated by commas).
+
+- Create JWT util & Global JWT Authentication
+
+```js
+@Component
+public class JwtUtil {
+
+    private static final String SECRET_STRING = "3cbfd9b8f0a8c8c8a0d1b9c0f7ab1b9c4e7f3b6f9a9e10b3a1c65b1a9b72db9";
+
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET_STRING));
+
+    public String generateToken(String issuer) {
+        return Jwts.builder()
+                .setSubject(issuer)
+                .setIssuedAt(new Date()) 
+                .setExpiration(new Date(System.currentTimeMillis() + 3600000)) 
+                .signWith(SECRET_KEY) 
+                .compact();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (JwtException e) {
+            return false;
+        }
+    }
+
+    public String extractIssuer(String token) {
+        return extractClaims(token).getIssuer();
+    }
+
+    public boolean isTokenExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());
+    }
+
+    public String extractUsername(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public Claims extractClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY) 
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+}
+```
+
+```js
+@Component
+public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    // High Priority (Execute First)
+    @Override
+    public int getOrder() {
+        return -1; // Pastikan filter ini dieksekusi awal
+    }
+
+    private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
+        exchange.getResponse().setStatusCode(httpStatus);
+        return exchange.getResponse().setComplete();
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+
+        // Get Token from Header Authorization
+        if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
+            return onError(exchange, "Missing Authorization Header", HttpStatus.UNAUTHORIZED);
+        }
+
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return onError(exchange, "Invalid Authorization Header", HttpStatus.UNAUTHORIZED);
+        }
+
+        String token = authHeader.substring(7);
+        try {
+            Claims claims = jwtUtil.extractClaims(token);
+
+            exchange.getRequest().mutate()
+                    .header("X-User-Id", claims.getSubject())
+                    .build();
+
+        } catch (Exception e) {
+            return onError(exchange, "Invalid Token", HttpStatus.UNAUTHORIZED);
+        }
+
+        return chain.filter(exchange);
+    }
+
+}
+```
+
+JwtAuthenticationFilter is a global filter used in Spring Cloud Gateway to perform authentication using JWT (JSON Web Token).
+
+GlobalFilter → Ensures that this filter is executed for every request passing through the API Gateway.
+Ordered → Allows configuring the execution order of the filter within the request pipeline.
+
+- Create Controller to Get and Set rate limit and Auth Controller to Generate Token Request
+
+```js
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+    
+    private final JwtUtil jwtUtil;
+
+    public AuthController(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @PostMapping("/generateToken")
+    public String generateToken(@RequestParam String serviceName) {
+        return jwtUtil.generateToken(serviceName);
+    }
+
+}
+```
+
+```js
+@RestController
+@RequestMapping("/rate-limit")
+public class RateLimitController {
+
+    private final DynamicRateLimiterService rateLimiterService;
+
+    public RateLimitController(DynamicRateLimiterService rateLimiterService) {
+        this.rateLimiterService = rateLimiterService;
+    }
+
+    @PostMapping("/set")
+    public ResponseEntity<String> setRateLimit(@RequestBody RateLimitConfig config) {
+        rateLimiterService.setRateLimit(config);
+        return ResponseEntity.ok("Rate limit updated for " + config.getEndpoint());
+    }
+
+    @PostMapping("/get")
+    public ResponseEntity<RateLimitConfig> getRateLimit(@RequestBody RateLimitConfig config) {
+        return ResponseEntity.ok(rateLimiterService.getRateLimit(config.getEndpoint()));
+    }
+
+}
+```
+
+### Testing
+
+- Set Rate Limit
+
+<Image
+  src="/images/post31_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Get Rate Limit
+
+<Image
+  src="/images/post31_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Generate Token
+
+<Image
+  src="/images/post31_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Send Request to Order Service
+
+<Image
+  src="/images/post31_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Now Trying to send request over rate limit
+
+<Image
+  src="/images/post31_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

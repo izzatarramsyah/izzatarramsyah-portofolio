@@ -1,0 +1,411 @@
+---
+title: Creating a Golang REST API Using the Webframework + Router Chi — Learning Golang
+date: 2024/1/24
+description: Tutorial on creating a REST API in Golang using the Webframework + Router Chi and the NoSQL MongoDB database
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating a Golang REST API Using the Webframework + Router Chi — Learning Golang
+
+### INTRODUCTION
+
+Hello Everyone
+In this article, I would like to share a tutorial on creating a REST API in Golang using the Webframework + Router Chi and the NoSQL MongoDB database.
+
+### PREREQUISITE
+
+If you don’t have MongoDB yet, you can download it first.
+
+Install the MongoDB and Chi Router packages first for our coding needs this time. You can open your command prompt and type the following commands.
+
+```js
+go get -u github.com/go-chi/chi
+go get go.mongodb.org/mongo-driver
+```
+
+### PROJECT STRUCTURE
+
+We will create the project structure first to separate between layers. Here, I’m using the Repository, Services, and Controller pattern to make it easier to develop. Below is an example of the folder structure that I am using.
+
+```js
+--ProjectGO
+---pkg
+---src
+---controller
+---EmployeeController.go
+---interfaces
+---EmployeeRepository.go
+---ServicesRepository.go
+---models
+---Employee.go
+---Response.go
+---repository
+---EmployeeRepositoryImpl.go
+---services
+---EmployeeServicesImpl.go
+---main.go
+```
+
+### MODELS
+
+First, we will create a file containing the structs used to map parameters to and from the database. Here, we will create models with the type struct. After that, we also need to create models that we will use as our API response.
+
+`models`
+
+```js
+package models
+
+type Employee struct {
+	Id          int 	`json:"id"`
+	Name      	string  `json:"name"`
+	Nik 		string 	`json:"nik"`
+	Division	string  `json:"division"`
+}
+```
+
+```js
+package models
+
+import (
+	"fmt"
+)
+
+type Response struct {
+	Code        string 	   `json:"code"`
+	Message		string 	   `json:"message"`
+	Object		[]Employee `json:"object"`
+}
+
+func (w *Response) Error() string {
+    return fmt.Sprintf(w.Code,w.Message, w.Object)
+}
+
+func Wrap(code string, message string, object []Employee) *Response {
+    return &Response{
+        Code		: code,
+		Message		: message,
+		Object		: object,
+    }
+}
+```
+
+### MODELS
+
+We will create files with the types interfaces, namely EmployeeRepository.go and EmployeeServices.go, inside the interfaces folder. These interfaces serve as a bridge between layers to facilitate communication between them.
+
+```js
+package interfaces
+
+import(
+	"../models"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+type EmployeeRepository interface{
+
+	GetEmployeeRepo(filter bson.M) *models.Response
+	CreateEmployeeRepo(emp models.Employee) *models.Response
+
+}
+```
+
+```js
+package interfaces
+
+import(
+	"../models"
+	"go.mongodb.org/mongo-driver/bson"
+
+)
+
+type EmployeeServices interface{
+
+	GetEmployeeServices(filter bson.M) *models.Response
+	CreateEmployeeServices(emp models.Employee) *models.Response
+
+}
+```
+
+Next, we will create files that implement the interfaces. These files will be used to access and perform operations to or from the database in the Repository layer and as the business logic in the Services layer.
+
+`repository`
+
+```js
+package repository
+
+import (
+	"context"
+	"../models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/Sirupsen/logrus"
+)
+
+var message string
+
+type EmployeeRepositoryImpl struct{
+	Conn 		  *mongo.Client
+	Log 		  *logrus.Logger
+}
+
+func (repository *EmployeeRepositoryImpl) GetEmployeeRepo(filter bson.M) *models.Response{
+	repository.Log.Info("Endpoint Hit: Get Repository ")
+
+	col := repository.Conn.Database("XLAxiata").Collection("Employee")
+	cur, err := col.Find(context.TODO(), filter)
+
+	if err != nil {
+		repository.Log.Error("Error get employee ", err)
+		message,_ = "Failed. Error get employee ", err
+		commonResponse := models.Wrap("500", message, nil)
+		return commonResponse
+	}
+
+	var result []models.Employee
+
+	for cur.Next(context.TODO()) {
+        var row models.Employee
+        err = cur.Decode(&row)
+        if err != nil {
+			repository.Log.Error("Error decode employee ", err)
+        }
+        result = append(result, row)
+	}
+
+	commonResponse := models.Wrap("200","Success" , result)
+
+	return commonResponse
+}
+
+func (repository *EmployeeRepositoryImpl) CreateEmployeeRepo(emp models.Employee) *models.Response{
+	repository.Log.Info("Endpoint Hit: Create Repository ")
+
+	commonResponse := models.Wrap("200", "Success", nil)
+
+	col := repository.Conn.Database("XLAxiata").Collection("Employee")
+	_,err := col.InsertOne(context.TODO(), emp)
+
+	if err != nil{
+		repository.Log.Error("Error insert employee ", err)
+		message,_ = "Failed. Error create employee ", err
+		commonResponse = models.Wrap("500", message, nil)
+	}
+
+	return commonResponse
+}
+```
+
+`services`
+
+```js
+package services
+
+import (
+	"../models"
+	"../interfaces"
+	"go.mongodb.org/mongo-driver/bson"
+	"github.com/Sirupsen/logrus"
+)
+
+type EmployeeServicesImpl struct{
+	Impl 		  interfaces.EmployeeRepository
+	Log 		  *logrus.Logger
+}
+
+func (services *EmployeeServicesImpl) GetEmployeeServices(filter bson.M) *models.Response{
+	services.Log.Info("Endpoint Hit: Get Service ")
+	return services.Impl.GetEmployeeRepo(filter)
+}
+
+func (services *EmployeeServicesImpl) CreateEmployeeServices(emp models.Employee) *models.Response{
+	services.Log.Info("Endpoint Hit: Create Service ")
+	return services.Impl.CreateEmployeeRepo(emp)
+}
+```
+
+### CONTROLLER
+
+Next, we will create a Controller file used to handle incoming requests through the router and send back the results of those requests.
+
+`controller`
+
+```js
+package controller
+
+import (
+	"../models"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
+	"../interfaces"
+	"go.mongodb.org/mongo-driver/bson"
+	"github.com/Sirupsen/logrus"
+)
+
+type EmployeeController struct{
+	Impl		  interfaces.EmployeeServices
+	Log 		  *logrus.Logger
+}
+
+func (controller *EmployeeController) GetEmployee(w http.ResponseWriter, r *http.Request){
+	controller.Log.Info("Endpoint Hit: Get Controller")
+
+	var employee models.Employee
+	var response *models.Response
+
+	reqBody, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		controller.Log.Error(w, "Kindly enter data with the event Consta and Value only in order to update")
+	}
+
+	jsonString := string(reqBody)
+	json.Unmarshal([]byte(jsonString), &employee)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	response = controller.Impl.GetEmployeeServices(bson.M{"id": employee.Id})
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func (controller *EmployeeController) GetAllEmployee(w http.ResponseWriter, r *http.Request){
+	controller.Log.Info("Endpoint Hit: Get Controller")
+
+	var employee models.Employee
+	reqBody, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		controller.Log.Error(w, "Kindly enter data with the event Consta and Value only in order to update")
+	}
+
+	jsonString := string(reqBody)
+	json.Unmarshal([]byte(jsonString), &employee)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(controller.Impl.GetEmployeeServices(bson.M{}))
+
+}
+
+func (controller *EmployeeController) CreateEmployee(w http.ResponseWriter, r *http.Request){
+	controller.Log.Info("Endpoint Hit: Create Controller")
+
+	var employee models.Employee
+	reqBody, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		controller.Log.Error(w, "Kindly enter data with the event Consta and Value only in order to update")
+	}
+
+	jsonString := string(reqBody)
+	json.Unmarshal([]byte(jsonString), &employee)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(controller.Impl.CreateEmployeeServices(employee))
+}
+```
+
+### MAIN GO
+
+For the final step, we will create main.go. This file can be considered as the entry point and will handle incoming requests to our API, directing them through the router to the desired controller.
+
+`main`
+
+```js
+package main
+
+import (
+    "context"
+	"os"
+	"io"
+	"net/http"
+	"./controller"
+	"./repository"
+	"./services"
+	"github.com/go-chi/chi"
+    "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/Sirupsen/logrus"
+	"github.com/t-tomalak/logrus-easy-formatter"
+)
+
+func main(){
+	file,_ := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+	logger.SetOutput(io.MultiWriter(file, os.Stdout))
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.NewClient(clientOptions)
+
+	if(err != nil){
+		logger.Info("Connect Failed : ",err)
+	}else{
+		logger.Info("Connect Success")
+	}
+
+	err = client.Connect(context.Background())
+	if err != nil {
+        logger.Info("Connect Failed ", err)
+	}
+
+	repository := &repository.EmployeeRepositoryImpl{Conn : client, Log : logger}
+	services   := &services.EmployeeServicesImpl{Impl : repository, Log : logger}
+	controller := controller.EmployeeController{Impl : services, Log : logger}
+
+	r := chi.NewRouter()
+	r.Get("/GetAllEmployee", controller.GetAllEmployee)
+	r.Post("/GetEmployee", controller.GetEmployee)
+	r.Post("/CreateEmployee", controller.CreateEmployee)
+
+	http.ListenAndServe(":8083", r)
+
+}
+
+```
+
+### TESTING
+
+`postman post`
+
+<Image
+  src="/images/post1_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`mongodb`
+
+<Image
+  src="/images/post1_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`postman get`
+
+<Image
+  src="/images/post1_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

@@ -1,0 +1,124 @@
+---
+title: Jenkins Pipeline SonarQube + Node.js — Learning Jenkins
+date: 2024/1/24
+description: Tutorial on Jenkins Pipeline SonarQube + Node.js
+tag: Jenkins
+author: You
+---
+
+import Image from 'next/image'
+
+# Jenkins Pipeline SonarQube + Node.js — Learning Jenkins
+
+### INTRODUCTION 
+
+In this article, we will create a simple pipeline using Jenkins. Jenkins is a tool used in the CI/CD process. Here, we will try to integrate SonarQube, GitLab, and Jenkins.
+
+### SETUP SONARQUBE
+
+To set up the SonarQube server, please refer to the following article.
+
+- Install the SonarQube Scanner plugin on Jenkins.
+- Add the SonarQube server to the Jenkins environment.
+- Add GitLab credentials to the Jenkins environment.Install plugins SonarQube Scanner pada jenkins.
+
+`Jenkins`
+
+<Image
+  src="/images/post18_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post18_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post18_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### CREATE JENKINS PIPELINE
+
+- Create a New Job
+
+<Image
+  src="/images/post17_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Create a Pipeline Script
+
+```js
+pipeline{
+agent any
+    stages {
+        stage ("Code Clone From Gitlab") {
+            steps {
+                git branch: 'main',
+                credentialsId: '0c6d6747-d64d-490d-86e9-d9966c8e5d89',
+                url: 'https://gitlab.com/arramsyah/demo-nodejs.git'
+            }
+        }
+        stage("Sonarqube Analysis") {
+           environment {
+    SCANNER_HOME = tool 'sonarqube'  // sonar-scanner is the name of the tool in the manage jenkins> tool configuration
+   }
+   steps {
+    withSonarQubeEnv(installationName: 'sonarqube') {  //installationName is the name of sonar installation in manage jenkins>configure system
+     bat "%SCANNER_HOME%/bin/sonar-scanner \
+     -Dsonar.projectKey=demo-nodejs \
+     -Dsonar.token=sqp_c5290a80ea8686b0ea73fe53ed79af4858544632 \
+     -Dsonar.sources=. \
+     -Dsonar.host.url=http://localhost:9000 \
+     -Dsonar.inclusions=index.js \
+     -Dsonar.test.inclusions=index.test.js "
+    }
+   }
+        }
+    }
+}
+```
+
+- Build Pipeline
+
+`Pipeline`
+
+<Image
+  src="/images/post18_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+After successfully running the pipeline, we can also check our SonarQube server. The Jenkins pipeline in the ‘SonarQube Analysis’ stage should trigger a report from SonarQube.
+
+`SonarQube Result`
+
+<Image
+  src="/images/post18_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

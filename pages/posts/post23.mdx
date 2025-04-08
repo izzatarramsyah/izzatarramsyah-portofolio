@@ -1,0 +1,297 @@
+---
+title: Java Generics Methods. The Secret to Cleaner, Faster Code — Learning Java
+date: 2025/03/02
+description: Tutorial on Java Generics Methods 
+tag: Java, Generics
+author: You
+---
+
+import Image from 'next/image'
+
+# Java Generics Methods — Learning Java
+
+### INTRODUCTION
+
+Generics means parameterized types. Generics allow us to create classes, interfaces, and methods with different data types. To understand the importance of generics, let’s take a look at the code example in the following generics class.
+
+```js
+public static void main(String[] args) {
+       List Object = new ArrayList<>();
+       object.add("Circle");
+       System.out.println(object.get(0));
+ }
+```
+
+```js
+Circle
+```
+
+But what if we want to assign a value to a variable ? 
+
+```js
+String circle = object.get(0);
+```
+
+If we look at that code, it will result in an error. The error occurs because the compiler does not know the data type of the object. To resolve this error, we need to add casting.
+
+```js
+String circle = (String) object.get(0);
+```
+
+But what if our code continues to grow and this happens in many lines of code ? This would certainly make things difficult. The solution to the problem above is to use Generics. What we need to do is define the data type of the List object.
+
+```js
+public static void main(String[] args) {
+        List object = new ArrayList(); // initilize list object without data type
+        object.add("Circle"); // add object
+        System.out.println(object.get(0)); // get first element
+        object.add("Rectangle"); // add object
+        System.out.println(object.get(1)); // get second element
+    }
+```
+
+```js
+Circle
+Rectangle
+```
+
+If we look at the code above, Generics makes our code safer from errors and easier to read.
+
+### GENERICS METHOD
+
+Generics methods allow us to use different data types as arguments for a method. To declare a Generics method, we need the keyword `<T>`. This keyword enables the Generics method to return and accept various data types.
+
+```js
+public static void main(String[] args) {
+        String[] words = {"apple", "banana", "pear"};
+        Integer[] numbers = {1, 5, 7};
+        List<String> wordsList = convertArrayToList(words);
+        List<Integer> numbersList = convertArrayToList(numbers);
+        System.out.println(wordsList);
+        System.out.println(numbersList);
+    }
+
+    private static `<T>` List`<T>` convertArrayToList(T[] array) {
+        return Arrays.asList(array);
+    }
+```
+
+```js
+[apple, banana, pear]
+[1, 5, 7]
+```
+
+For example, in the code above, we have two types of arrays: String and Integer. We want to print each element of these arrays. We can use a Generics method as a way to convert the array to a List so it can be printed in the Main class. List`<T>` means the method returns a value as a List, while T[] means the method can accept any data type in the form of an array. One benefit of using this Generics method is that we can minimize ClassCastException errors when running the program. Additionally, this Generics method can be used multiple times due to its flexibility.
+
+### BOUNDED GENERICS METHOD
+
+Bounded Generics methods are used to impose restrictions on the data types that can be used. To use Bounded Generics methods, they need to be declared with the keyword extends.
+
+```js
+public static void main(String[] args) {
+        Double[] doubles = {2.0, 3.5, 14.7};
+        Integer[] numbers = {1, 5, 7};
+        List<Double> doublesList = convertArrayToList(doubles);
+        List<Integer> numbersList = convertArrayToList(numbers);
+        System.out.println(doublesList);
+        System.out.println(numbersList);
+    }
+
+    private static `<T extends Number>` List`<T>` convertArrayToList(T[] array) {
+        return Arrays.asList(array);
+    }
+```
+
+```js
+[2.0, 3.5, 14.7]
+[1, 5, 7]
+```
+
+The keyword `<T>` extends Number> allows us to return values with different Number data types (Integer, Double, Long, etc.).
+
+### WILDCARDS GENERICS METHOD
+
+The use of wildcards provides us with flexibility in handling parameter types without needing to know the specific parameters being provided. There are three types of wildcards used in Generics:
+
+UNBOUNDED WILDCARDS
+
+It is used when we do not need to impose any specific type constraints by using the keyword `<T>`.
+
+```js
+public static void main(String[] args) {
+        List<Integer> numbers = Arrays.asList(1, 5, 7);
+        List<String> words = Arrays.asList("apple", "banana", "pear");
+        printList(words);
+        printList(numbers);
+    }
+
+    public static void printList(List`<T>` list) {
+        for (Object elem : list) {
+            System.out.println(elem);
+        }
+    }
+```
+
+```js
+apple banana pear
+1 5 7
+```
+
+As seen in the code above, List`<T>` can accept a List containing any data type.
+
+2. UPPER BOUNDED WILDCARDS
+
+It is used when we want to work with parameter types that are subclasses of a specific type. Upper Bounded Wildcard uses the keyword extends. In short, extends restricts Unbounded Wildcard.
+
+```js
+public class ClothingSite {
+    
+    public static void main(String[] args) {
+
+        ShirtItem shirtItem = new ShirtItem();
+        checkoutItem(shirtItem);
+
+        JacketItem jacketItem = new JacketItem();
+        checkoutItem(jacketItem);
+
+        List<ClothingItem> clothingItems = new ArrayList<>();
+        clothingItems.add(shirtItem);
+        clothingItems.add(jacketItem);
+
+        checkoutAllItems(clothingItems);
+    }
+
+    static void checkoutItem(ClothingItem item) {
+        System.out.println("Item purchased: " + item.getName() + ", price: " + item.getPrice());
+    }
+
+    static void checkoutAllItems(List<ClothingItem> clothingItems) {
+
+        for (ClothingItem clothingItem : clothingItems) {
+            checkoutItem(clothingItem);
+        }
+
+    }
+    
+}
+```
+
+```js
+public abstract class ClothingItem {
+    
+    abstract int getPrice();
+
+    abstract String getName();
+
+}
+```
+
+```js
+public class ShirtItem  extends ClothingItem {
+
+    @Override
+    int getPrice() {
+        return 10;
+    }
+
+    @Override
+    String getName() {
+        return "Shirt";
+    }
+    
+}
+```
+
+```js
+public class JacketItem extends ClothingItem {
+
+    @Override
+    int getPrice() {
+        return 25;
+    }
+
+    @Override
+    String getName() {
+        return "Jacket";
+    }
+    
+}
+```
+
+```js
+Item purchased: shirt, price: 10
+```
+
+In the method checkoutAllItems(List< ?  extends ClothingItem> clothingItems), the parameter clothingItems is a List with an upper bound of ClothingItem. This means the list can contain ClothingItem or its subtypes (such as ShirtItem or JacketItem). This is very useful when we want to perform operations on a collection of elements that are all subclasses of a specific type.
+
+3. LOWER BOUNDED WILDCARDS
+
+It is used when we want to work with parameter types that are superclasses of a specific type. Lower Bounded Wildcard uses the keyword super.
+
+```js
+public class ClohtingSite {
+    
+    public static void main(String[] args) {
+
+        List<ClothingItem> clothingList = new ArrayList<>();
+        addClothingItems(clothingList);
+        checkoutAllItems(clothingList);
+
+    }
+
+    static void checkoutItem(ClothingItem item) {
+        System.out.println("Item purchased: " + item.getName() + ", price: " + item.getPrice());
+    }
+
+    static void checkoutAllItems(List< ?  extends ClothingItem> clothingItems) {
+        for (ClothingItem clothingItem : clothingItems) {
+            checkoutItem(clothingItem);
+        }
+    }
+
+    public static void addClothingItems(List< ?  super ClothingItem> clothingItems) {
+        clothingItems.add(new ShirtItem());
+    }
+
+}
+```
+
+```js
+public class JacketItem extends ClothingItem {
+    @Override
+    int getPrice() {
+        return 25;
+    }
+    @Override
+    String getName() {
+        return "Jacket";
+    }
+    @Override
+    String getSize() {
+        return "XL";
+    }
+}
+```
+
+```js
+public class ShirtItem extends ClothingItem {
+    @Override
+    int getPrice() {
+        return 10;
+    }
+    @Override
+    String getName() {
+        return "Shirt";
+    }
+    @Override
+    String getSize() {
+        return "M";
+    }
+}
+```
+
+```js
+Item purchased: shirt, price: 10
+```
+
+In the method addClothingItems(List< ?  super ClothingItem> clothingItems), the parameter clothingItems is a List with a lower bound of ClothingItem. This means the list can be of type ClothingItem or its superclasses. This is very useful when we want to add elements to a collection without strict type constraints, as long as all elements are subclasses of Clothing.

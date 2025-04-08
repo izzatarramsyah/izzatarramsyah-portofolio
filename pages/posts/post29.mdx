@@ -1,0 +1,250 @@
+---
+title: CI/CD for Spring Boot Deployment on EC2
+date: 2025/03/02
+description: Tutorial on CI/CD for Spring Boot Deployment on EC2
+tag: Java, Spring Boot, AWS
+author: You
+---
+
+import Image from 'next/image'
+
+CI/CD for Spring Boot Deployment on EC2
+
+### INTRODUCTION
+
+In this modern era, CI/CD is an essential part of application development to automate the build, testing, and deployment processes. With CI/CD, developers can significantly reduce manual errors that typically occur during deployment. Additionally, CI/CD allows for faster application updates. In this article, we will walk through the process of deploying an application using GitLab CI/CD and deploying it to an EC2 instance.
+
+### PREREQUISITES
+- AWS EC2 Instance: Set up an AWS EC2 Instance as a VPS to deploy the application.
+- Docker: Install Docker on the AWS EC2 Instance to handle pulling and running the application.
+- GitLab: For repository management and CI/CD.
+- SSH Key: To access the EC2 instance securely.
+
+### Set Up EC2 Instance
+To deploy the application, you need to create an EC2 instance first.
+
+- Login to AWS Console.
+- Launch a New Instance.
+- Configure the instance. Allow SSH access on port 22.
+- Create a New Key Pair. This will generate a .pem key.
+- Launch the Instance.
+- Connect to the EC2 Instance via SSH
+
+```js
+ssh -i /path/to/your/key.pem ubuntu@your-ec2-ip
+```
+
+### ssh -i /path/to/your/key.pem ubuntu@your-ec2-ip
+
+Our application will be packaged into a deployment artifact. In this case, we’ll use Docker to containerize our application.
+
+- Create Dockerfile
+
+```js
+FROM openjdk:8-jre-alpine # Base image
+WORKDIR /app # Set working directory
+COPY target/ticketing-app.jar app.jar # Copy the build artifact to the container
+EXPOSE 8080 # Expose the container port
+CMD ["java", "-jar", "app.jar"] # Run the Java application in the container
+```
+
+- Test Build and Run the Image Locally
+
+```js
+docker build -t my-app .
+docker run -d -p 8080:8080 my-app
+```
+
+###Set Up GitLab CI/CD Pipeline
+
+**Create New Repository**
+
+Generate an access token: Go to your GitLab profile -> Settings -> Access Tokens, and generate a new access token to be used as your GitLab password.
+
+**Add variables to your repository**
+
+CI_REGISTRY -> registry.gitlab.com
+
+CI_REGISTRY_PASSWORD -> Your access token
+
+CI_REGISTRY_USER -> Your GitLab username
+
+EC2_HOST -> EC2 instance’s public IP
+
+EC2_SSH_KEY -> Your SSH key (generated from EC2 instance launch)
+
+EC2_USER -> EC2 username (e.g., ubuntu)
+
+###Create the .gitlab-ci.yml file
+
+```js
+image: docker:20.10  
+
+services:
+  - docker:dind
+
+stages:
+  - build-maven
+  - docker-build
+  - deploy
+
+variables:
+  DOCKER_IMAGE: registry.gitlab.com/arramsyah/ticketing-app
+  DOCKER_TAG: latest
+
+cache:
+  paths:
+    - .m2/repository/
+
+before_script:
+  - echo "Setting up environment"
+
+build-maven:
+  image: maven:3.6.3-jdk-8  
+  stage: build-maven
+  script:
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar  
+    expire_in: 1 day
+
+docker-build:
+  image: docker:20.10  
+  stage: docker-build
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+    - docker push $DOCKER_IMAGE:$DOCKER_TAG
+  dependencies:
+    - build-maven  
+  artifacts:
+    paths:
+      - Dockerfile
+
+deploy:
+  stage: deploy
+  before_script :
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+  script:
+    - ssh $EC2_USER@$EC2_HOST "docker login registry.gitlab.com -u \"$CI_REGISTRY_USER\" -p \"$CI_REGISTRY_PASSWORD\""
+    - ssh $EC2_USER@$EC2_HOST "docker pull registry.gitlab.com/arramsyah/ticketing-app:latest"
+    - ssh $EC2_USER@$EC2_HOST "docker stop tikceting-app || true && docker rm tikceting-app || true"
+    - ssh $EC2_USER@$EC2_HOST "docker run -d -p 8888:8888 --name tikceting-app registry.gitlab.com/arramsyah/ticketing-app:latest"
+  only:
+    - main
+```
+
+###Set Up GitLab Runner
+Gitlab Runner is an open-source application used to run CI/CD pipelines defined in the .gitlab-ci.yml
+
+**Install GitLab Runner**
+**Register GitLab Runner**
+
+Pull image : docker pull gitlab-runner
+
+Run Docker :
+```js
+docker run -d --name gitlab-runner --restart always -v /srv/gitlab-runner/config:/etc/gitlab-runner -v /var/run/docker.sock:/var/run/docker.sock gitlab/gitlab-runner:latest
+```
+
+Docker Exec : 
+```js
+docker exec -it gitlab-runner gitlab-runner register
+```
+
+Then, follow the steps below:
+
+- GitLab instance URL: https://gitlab.com (or your self-hosted GitLab URL).
+- Token: Enter the token you have copied.
+- Description: Give the runner a name (e.g., docker-runner).
+- Tags: Enter relevant tags (e.g., docker, ci).
+- Executor: Select Docker.
+- Docker image: Use a base image, such as alpine:latest or golang:latest.
+
+**Setup SSH Key for GitLab Runner and EC2 Instance**
+
+- Enter Gitlab Runner
+
+```js
+docker exec -it <container_name_or_id> /bin/bash
+```
+
+- Generate SSH Key
+
+```js
+ssh-keygen -t rsa -b 4096 -C ec_user@ec_host
+```
+
+- Display SSH Key
+
+```js
+cat ~/.ssh/id_rsa.pub
+```
+
+###Add SSH Key to EC2 Instance
+
+- Enter the EC2 instance and open the authorized_keys file and add the generated SSH key to this file
+```js
+nano ~/.ssh/authorized_keys
+```
+
+- If the .ssh Folder and authorized_keys File Do Not Exist, Run the Following Commands
+```js
+mkdir -p ~/.ssh
+touch ~/.ssh/authorized_keys
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+```
+
+###Push Your Code to Repo and Test the Application
+
+- Check Pipeline
+
+<Image
+  src="/images/post29_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Check Images on EC2 Instance
+
+<Image
+  src="/images/post29_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post29_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+- Access The Application using public IP
+
+<Image
+  src="/images/post29_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+###Conclusion
+
+With CI/CD and Docker, deploying a Spring Boot application to an EC2 instance becomes an automated and seamless process. By following the steps above, we’ve created a pipeline that handles the entire lifecycle from building to deploying the application. This results in faster, more efficient deployment processes with fewer errors.

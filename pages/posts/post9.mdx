@@ -1,0 +1,327 @@
+---
+title: Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part1 — Learning Java
+date: 2024/1/24
+description: Tutorial on Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part1
+tag: Spring Boot
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating REST API with Java Spring Boot + Oracle Database + JBoss Server #Part1 — Learning Java
+
+### INTRODUCTION
+
+Hello, everyone! Welcome back to my article 😁. In this article, I want to share a short tutorial on creating a Java REST API using the Spring framework, specifically Spring Boot. Spring is one of the Java frameworks, and one of the advantages of Spring Boot is its easy and fast configuration. For those who are new to Spring, I highly recommend starting with Spring Boot.
+
+This article will be divided into two parts: #Part1 to configure the database and connection between Spring Boot, JBoss Server, and the Oracle Database. Then, #Part2 will cover coding the REST API.
+
+### PREREQUISITE
+
+In this tutorial, I use the STS (Spring Tool Suite) application. To create a Spring Boot project, one easy way is to generate a starter project directly through the website [Spring](https://start.spring.io/) . After generating it, you can import it directly into the application.
+
+`Spring Boot Project`
+
+<Image
+  src="/images/post9_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### POM.XML
+
+In short, POM (Project Object Model) is an XML file that contains project information and configurations used by Maven to build a project. Maven itself is a build automation tool used to develop applications with external library references. Here is the standard POM.XML configuration that I use.
+
+```js
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.5.0</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+	 <packaging>war</packaging>
+	<groupId>com.clinic</groupId>
+	<artifactId>user</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>user</name>
+	<description>Demo project for Spring Boot</description>
+
+	<properties>
+		  <java.version>1.8</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>ojdbc7</artifactId>
+			<version>12.1.0.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-mapper-asl</artifactId>
+			<version>1.9.13</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.6</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<finalName>${artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+```
+
+### JBOSS Server & Configuration Setup
+
+First, download JBoss. Click here to download JBoss. Then, add the downloaded JBoss to the home directory of the server you are creating. Also, don’t forget to install JBoss.
+
+After adding the JBoss server to the IDE, run the server. Open the browser and go to http://127.0.0.1:9990/console/ (adjust the port accordingly).
+
+`JBOSS Server`
+
+<Image
+  src="/images/post9_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`JBOSS Directory`
+
+<Image
+  src="/images/post9_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`OJBDC.jar`
+
+<Image
+  src="/images/post9_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Add the OJDBC Jar to the JBoss Server to connect Spring Boot with the Oracle Database. Next, we will create a JNDI Datasource by selecting the Configuration tab, then selecting Subsystem -> Datasources -> Non XA -> Add Datasource. Then follow the steps below.
+
+- Write JNDI Naming:
+- Choose OJDBC Dedicated Server:
+- Write Database SID, Username, and Password for your Oracle Connection:
+- JDBC Test Connection
+
+`Oracle Datasource`
+
+<Image
+  src="/images/post9_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post9_img6.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post9_img7.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post9_img8.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post9_img9.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### DATASOURCE & DB CONNECTION SETUP ON SPRING BOOT
+
+After configuring the JBoss Server, we will create a class to configure the JNDI Datasource in Spring Boot. Set the JndiName parameter value according to the JNDI Datasource name created earlier.
+
+```js
+package com.clinic.user.config;
+
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.jndi.JndiObjectFactoryBean;
+
+@Configuration
+public class BeanConfig {
+
+	@Bean(name = "datasource")
+	@Primary
+    public DataSource dataSourcejndi() throws NamingException {
+		JndiObjectFactoryBean bean = new JndiObjectFactoryBean();
+		bean.setJndiName("java:/ClinicReservation");
+		bean.setProxyInterface(DataSource.class);
+		bean.setLookupOnStartup(false);
+		bean.afterPropertiesSet();
+		return (DataSource) bean.getObject();
+    }
+}
+```
+
+Next, create another class that will be used to execute SQL queries, call packages/procedures/functions on Oracle, set connection, or close connection from Spring Boot to the database..
+
+```js
+package com.clinic.user.config;
+
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import javax.sql.DataSource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+
+public class DBConnection {
+	public Connection connection = null;
+	public PreparedStatement pr = null;
+	public ResultSet rs = null;
+	public CallableStatement cl = null;
+
+	@Autowired
+	private DataSource dataSource;
+
+	protected static final Logger LOG = LoggerFactory.getLogger(DBConnection.class);
+
+	public void closeConnection() throws Exception{
+		try {
+			if(connection != null){
+				connection.close();
+			}
+		} catch (SQLException e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
+
+	public void closeStatement() throws Exception {
+		try {
+			if(this.pr != null){
+				this.pr.close();
+			}
+			if(this.rs != null){
+				this.rs.close();
+			}
+			if(this.cl != null){
+				this.cl.close();
+			}
+		} catch (SQLException e) {
+			LOG.error(e.getMessage(), e);
+		}
+
+	}
+
+	public Connection getConnection(){
+		Connection connection = null;
+		try {
+			connection = dataSource.getConnection();
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOG.error(e.getMessage(), e);
+		}
+
+		return connection;
+	}
+}
+```
+
+If you look at the code above, there are four parameters used: Connection, PreparedStatement, ResultSet, and CallableStatement.
+
+- Connection: Used to establish and close the connection to the database.
+- PreparedStatement: Used to execute queries.
+- ResultSet: Used to extract rows of data from query or stored procedure results.
+- CallableStatement: Used to call Stored Procedures/Functions/Packages.

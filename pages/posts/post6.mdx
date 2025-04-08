@@ -1,0 +1,188 @@
+---
+title: Creating Configurable Environment in Golang — Learning Golang
+date: 2024/1/24
+description: Tutorial on Creating Configurable Environment in Golang
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating Configurable Environment in Golang — Learning Golang
+
+### INTRODUCTION
+
+In this article, I want to share one relatively easy way to create configurable database details based on the environment we are using, such as Development or Production. This will certainly make it easier for us to develop when there is more than one environment in use. In this tutorial, we will use an SQL database, and for the database details, we will use JSON files.
+
+```js
+--ProjectSQL
+---pkg
+---src
+  ---config
+    ---configuration.go
+  ---main.go
+  ---config-dev.json
+  ---config-prod.json
+```
+
+### DATABASE CONFIGURATION
+
+First, we will create JSON files that we will use as configuration details for the database. For example, here we will create 2 JSON files.
+
+`Database`
+
+<Image
+  src="/images/post6_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post6_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### CONFIGURATION
+
+Next, we will create code for configuration that will be used to read or load the JSON files we created earlier based on the environment we are using.
+
+```js
+package config
+
+import (
+	"fmt"
+	"strings"
+	"encoding/json"
+	"io/ioutil"
+)
+
+type Configuration interface {
+	LoadConfigurationFromFile(fp string)
+	GetValue(key string) string
+}
+
+type configuration struct {
+	conf        map[string]interface{}
+	filepath    string
+}
+
+func NewConfiguration() *configuration {
+	return &configuration{}
+}
+
+func (c *configuration) LoadConfigurationFromFile(fp string) {
+	c.filepath = fp
+	plan, _ := ioutil.ReadFile(c.filepath)
+	jsonMap := make(map[string]interface{})
+	err := json.Unmarshal([]byte(plan), &jsonMap)
+	if err != nil {
+		panic(err)
+	}
+	c.conf = jsonMap
+}
+
+func (c *configuration) GetValue(key string) string {
+	return getValue(key, c.conf)
+}
+func getValue(key string, m map[string]interface{}) string {
+	keys := strings.Split(key, ".")
+	for k, v := range m {
+		if keys[0] == k {
+			if mv, ok := v.(map[string]interface{}); ok {
+				return getValue(strings.Join(keys[1:], "."), mv)
+			} else {
+				if len(keys) == 1 {
+					return fmt.Sprintf("%v", v)
+				}
+			}
+		}
+	}
+	return ""
+}
+```
+
+If we look at the code above, we create two main functions:
+
+- LoadConfigurationFromFile to call and read the JSON file and extract it into a variable conf as map[string].
+- GetValue to get the value from the extracted result of the JSON file, which is a variable of type map[string].
+
+### MAIN GO
+
+Next, we will call the Configuration function in main.go.
+
+```js
+package main
+
+import (
+  "log"
+	"fmt"
+	_configuration "./config"
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
+	"os"
+)
+
+func main() {
+
+	config := _configuration.NewConfiguration()
+	config.LoadConfigurationFromFile(getFilePathConfigEnvirontment())
+	dbHost := config.GetValue(`database.host`)
+	dbPort := config.GetValue(`database.port`)
+	dbUser := config.GetValue(`database.user`)
+	dbPass := config.GetValue(`database.pass`)
+	dbName := config.GetValue(`database.name`)
+	connection := fmt.Sprintf(dbUser + ":" + dbPass + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8&parseTime=True")
+
+	log.Println(connection)
+	sqlConn,err := sql.Open("mysql", connection)
+	c := context.Background()
+
+	if(err != nil){
+		log.Println("Connect Failed")
+	}else{
+		log.Println("Connect Success")
+	}
+
+}
+
+func getFilePathConfigEnvirontment() string {
+	env := "dev"
+	if len(os.Args) >= 2 && os.Args[1] != "" {
+		log.Println(os.Args[1])
+		env = os.Args[1]
+	} else {
+		log.Fatal("you must define environtment")
+	}
+	switch env {
+	case "dev":
+		return "config-dev.json"
+	case "production":
+		return "config-production.json"
+	}
+	return "config-dev.json"
+}
+```
+
+The getFilePathConfigEnvirontment function is used to read the environment that we define when running the go run main.go command. By default, we use the dev environment. Then, in the main function, we call the two main functions in configuration.go by initializing them with the NewConfiguration function.
+
+### RESULT
+
+Next, we will run the go app using the dev environment. Simply by adding the environment name that will be used, for example, go run main.go dev or go run main.go production.
+
+`Result`
+
+<Image
+  src="/images/post6_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

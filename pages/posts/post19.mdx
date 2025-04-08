@@ -1,0 +1,112 @@
+---
+title: Jenkins Pipeline Push Docker Images to Docker Hub — Learning Jenkins
+date: 2024/1/24
+description: Tutorial on Jenkins Pipeline Push Docker Images to Docker Hub
+tag: Jenkins, Docker Hub
+author: You
+---
+
+import Image from 'next/image'
+
+# Jenkins Pipeline Push Docker Images to Docker Hub — Learning Jenkins
+
+### INTRODUCTION
+
+In the two previous articles, we successfully pushed Docker images to Docker Hub and integrated Jenkins pipeline with SonarQube + Node.js & GitLab. In this article, we will do both. This is usually part of the CI/CD process.
+
+### SETUP JENKINS 
+
+Add Docker Hub credentials to the Jenkins environment.
+
+`Setup Jenkins`
+
+<Image
+  src="/images/post19_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### CREATE JENKINS PIPELINE
+
+- Create a Pipeline Script
+
+```js
+pipeline{
+environment {
+registry = "arramsyah/docker-rest-api-app"
+registryCredential = 'cf0e37c1-bb1f-4cee-a617-561868f13486'
+dockerImage = ''
+}
+agent any
+    stages {
+        stage ("Code Clone From Gitlab") {
+            steps {
+                git branch: 'main',
+                credentialsId: '9d83a27b-a8d9-4db7-b3c1-b88f5d6f9628',
+                url: 'https://github.com/izzatarramsyah/nodejs-sample-api.git'
+            }
+        }
+        stage("Sonarqube Analysis") {
+          environment {
+    SCANNER_HOME = tool 'sonarqube'  // sonar-scanner is the name of the tool in the manage jenkins> tool configuration
+   }
+   steps {
+    withSonarQubeEnv(installationName: 'sonarqube') {  //installationName is the name of sonar installation in manage jenkins>configure system
+     bat "%SCANNER_HOME%/bin/sonar-scanner \
+     -Dsonar.projectKey=node-api-testing \
+     -Dsonar.token=sqp_4239b0abadae0ed7a4712e4eac5a8e03b94e1762 \
+     -Dsonar.sources=. \
+     -Dsonar.host.url=http://localhost:9000 \
+     -Dsonar.inclusions=index.js \
+     -Dsonar.test.inclusions=index.test.js "
+    }
+   }
+        }
+        stage('Building Image') {
+            steps{
+                script {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
+            }
+        }
+        stage('Push Image') {
+            steps{
+                script {
+                    docker.withRegistry( '', registryCredential ) {
+                    dockerImage.push()
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+- Build Pipeline
+
+`Jenkins Pipeline`
+
+<Image
+  src="/images/post19_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+After successfully running the pipeline, check the Docker Images on your Docker Hub.
+
+`Docker Hub`
+
+<Image
+  src="/images/post19_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

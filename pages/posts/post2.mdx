@@ -1,0 +1,186 @@
+---
+title: Creating Logging in Golang Using Logrus — Learning Golang
+date: 2024/1/24
+description: Adding a logging system to our API
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating Logging in Golang Using Logrus — Learning Golang
+
+### INTRODUCTION
+
+After in the previous article we created a simple REST API, this time we continue developing our project by adding a logging system to our API. This logging is used to record activities that occur in our API, making it easier to trace in case of errors.
+
+In this tutorial, I am using a familiar logging library for Golang called Logrus. By using this library, we don’t need to worry about creating a logging format as its functions are readily available
+
+### PREREQIUSITE
+
+Before we begin, we need to import the Logrus package as the logging library and Logrus-easy-formatter for the logging output format we create.
+
+```js
+go get -u github.com/go-chi/chi
+go get go.mongodb.org/mongo-driver
+```
+
+### SETUP LOGRUS FORMAT
+
+The coding for this part is relatively easy as it doesn’t require writing a lot of code. For the first step, we will set up the logger format.
+
+`main`
+
+```js
+package main
+
+import (
+    "context"
+	"os"
+	"io"
+	"net/http"
+	"./controller"
+	"./repository"
+	"./services"
+	"github.com/go-chi/chi"
+    "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/Sirupsen/logrus"
+	"github.com/t-tomalak/logrus-easy-formatter"
+)
+
+func main(){
+	file,_ := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+	logger.SetOutput(io.MultiWriter(file, os.Stdout))
+
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.NewClient(clientOptions)
+
+	if(err != nil){
+		logger.Info("Connect Failed : ",err)
+	}else{
+		logger.Info("Connect Success")
+	}
+
+	err = client.Connect(context.Background())
+	if err != nil {
+        logger.Info("Connect Failed ", err)
+	}
+
+	repository := &repository.EmployeeRepositoryImpl{Conn : client, Log : logger}
+	services   := &services.EmployeeServicesImpl{Impl : repository, Log : logger}
+	controller := controller.EmployeeController{Impl : services, Log : logger}
+
+	r := chi.NewRouter()
+	r.Get("/GetAllEmployee", controller.GetAllEmployee)
+	r.Post("/GetEmployee", controller.GetEmployee)
+	r.Post("/CreateEmployee", controller.CreateEmployee)
+
+	http.ListenAndServe(":8083", r)
+
+
+}
+
+```
+
+### SETUP LOGRUS FORMAT
+
+Up to this point, we have completed setting up the logger. Next, we will parse this logger to other files in our project so that the logger logrus functions can be used in all files.
+
+For example, here we will parse the logger to the Repository file. In main.go, we add a new parameter, namely Log, to the EmployeeRepository file.
+
+```js
+repository := &repository.EmployeeRepositoryImpl{Conn : client, Log : logger}
+```
+
+Next, we will retrieve the Log parameter parsed from the main file in the EmployeeRepository file.
+
+`repository`
+
+```js
+package repository
+
+import (
+	"context"
+	"../models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/Sirupsen/logrus"
+)
+
+var message string
+
+type EmployeeRepositoryImpl struct{
+	Conn 		  *mongo.Client
+	Log 		  *logrus.Logger
+}
+
+func (repository *EmployeeRepositoryImpl) GetEmployeeRepo(filter bson.M) *models.Response{
+	repository.Log.Info("Endpoint Hit: Get Repository ")
+
+	col := repository.Conn.Database("XLAxiata").Collection("Employee")
+	cur, err := col.Find(context.TODO(), filter)
+
+	if err != nil {
+		repository.Log.Error("Error get employee ", err)
+		message,_ = "Failed. Error get employee ", err
+		commonResponse := models.Wrap("500", message, nil)
+		return commonResponse
+	}
+
+	var result []models.Employee
+
+	for cur.Next(context.TODO()) {
+        var row models.Employee
+        err = cur.Decode(&row)
+        if err != nil {
+			repository.Log.Error("Error decode employee ", err)
+        }
+        result = append(result, row)
+	}
+
+	commonResponse := models.Wrap("200","Success" , result)
+
+	return commonResponse
+}
+
+func (repository *EmployeeRepositoryImpl) CreateEmployeeRepo(emp models.Employee) *models.Response{
+	repository.Log.Info("Endpoint Hit: Create Repository ")
+
+	commonResponse := models.Wrap("200", "Success", nil)
+
+	col := repository.Conn.Database("XLAxiata").Collection("Employee")
+	_,err := col.InsertOne(context.TODO(), emp)
+
+	if err != nil{
+		repository.Log.Error("Error insert employee ", err)
+		message,_ = "Failed. Error create employee ", err
+		commonResponse = models.Wrap("500", message, nil)
+	}
+
+	return commonResponse
+}
+```
+
+### RESULT
+
+It’s time to run the main.go file and test it by calling our API. If successful, a logs.txt file will be generated in our project folder like this.
+
+`Folder Log`
+
+<Image
+  src="/images/post2_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

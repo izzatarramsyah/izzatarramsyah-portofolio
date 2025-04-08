@@ -1,0 +1,120 @@
+---
+title: Building Containers Using Docker Compose for Golang Application & MySql Database — Learning Golang
+date: 2024/1/24
+description: Tutorial on Building Containers Using Docker Compose for Golang Application & MySql Database
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Building Containers Using Docker Compose for Golang Application & MySql Database — Learning Golang
+
+### INTRODUCTION
+
+To learn more about what Docker Compose is, please click here for more information.
+
+### DOCKER-COMPOSE.YML
+
+Now, we will create a new file named docker-compose.yml as shown in the image below. This file contains the configuration of the web service and the database.
+
+```js
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    image : projectlogin-golang
+  db:
+    image: mysql:5.7
+    restart: always
+    container_name: godockerDB
+    environment:
+      MYSQL_DATABASE: 'dev_apps'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - my-db:/var/lib/mysql
+volumes:
+  my-db:
+```
+
+### GO SQL CONNECTION
+
+Before we run, don’t forget to change the SQL connection configuration in the connection.go file according to the Docker Compose configuration earlier.
+
+`“MYSQL_USER:MYSQL_PASSWORD@tcp(CONTAINER_NAME)/MYSQL_DATABASE”`
+
+```js
+sqlConn,err := sql.Open("mysql", "user:password@tcp(godockerDB)/dev_apps")
+```
+
+### RUN DOCKER COMPOSE
+
+Next, run the following command to run Docker Compose.
+
+```js
+docker-compose up
+```
+
+### SETUP SESSION CONEECTION MYSQL
+
+Next, we will create a MySQL session connection according to the configuration in Docker Compose.
+
+`Result`
+
+<Image
+  src="/images/pos8_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### RESULT
+
+Next, we will test by calling the API service to find out whether the connection between Docker and the database has been successfully established.
+
+- Test Hit API by Postman
+- Logs on Docker Desktop
+- Database Query.
+
+`Postman Test`
+
+<Image
+  src="/images/pos8_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Docker Dekstop`
+
+<Image
+  src="/images/pos8_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Database`
+
+<Image
+  src="/images/pos8_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

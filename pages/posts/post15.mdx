@@ -1,0 +1,115 @@
+---
+title: Build Container using Docker Compose — Learning Docker
+date: 2024/1/24
+description: Tutorial on Build Container using Docker Compose
+tag: Docker, Containerization
+author: You
+---
+
+import Image from 'next/image'
+
+# Build Container using Docker Compose — Learning Docker
+
+### INTRODUCTION
+
+In short, Docker Compose is used to create a container that comprises several Docker images. Without using Docker Compose, if we want to run multiple containers simultaneously within the same network, we need to execute several Docker commands. For example, here we will create a MongoDB container as a database and a Node.js container as a backend. Please clone the Node.js project [here](https://github.com/izzatarramsyah/nodejs-sample-api) as an example.
+
+### RUN CONTAINER USING DOCKER COMMAND
+
+Before we build the container using Docker Compose, let’s try running the MongoDB container and Node.js backend container using Docker commands.
+
+- Build Image Backend Node JS
+```js
+docker build -t app-name:0.0.1
+```
+
+- Create Docker Network
+```js
+docker network create network-name
+```
+
+- Create Docker Volume
+```js
+docker volume create volume-name
+```
+
+- Build Mongo Docker Image using Docker Network & Docker Volume
+```js
+docker run -p 27017:27017 --network docker-rest-api-network -v docker-rest-api-volume:/data/db -d --name mongo -t mongo:latest
+```
+
+- Build Node JS Backend Image using Docker Network
+```js
+docker run -p -p 8000:8000 --network docker-rest-api-network -d -t docker-rest-api:0.0.1
+```
+
+`docker ps`
+
+<Image
+  src="/images/post15_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Up to this point, we have created two containers, both of which are connected to the same network, ‘docker-rest-api-network.’ In the MongoDB container, we also used a Docker Volume for data storage, where we mounted it from the host to ‘/data/db.’ This Docker Volume functionality ensures data persistence, allowing the API to retrieve data from the host even if the MongoDB container is stopped or restarted.
+
+Now, let’s see how we can achieve the same using Docker Compose. In essence, what we have done above will be moved into a Docker Compose file. Create a new file named ‘docker-compose.yml.’
+
+`docker.compose.yml`
+
+```js
+version: '3.7'
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongodb
+    hostname: mongo
+    volumes:
+      - docker-rest-api-volume:/data/db
+    networks:
+      - docker-rest-api-network
+  app:
+    build : .
+    container_name: docker-rest-api
+    ports:
+      - 8000:8000
+    depends_on:
+      - mongo
+    networks:
+      - docker-rest-api-network     
+networks:
+  docker-rest-api-network:
+volumes:
+  docker-rest-api-volume:
+```
+
+After running the following command, try testing it using Postman.
+
+```js
+docker-compose up
+```
+
+`Post Test`
+
+<Image
+  src="/images/post15_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Get Test`
+
+<Image
+  src="/images/post15_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

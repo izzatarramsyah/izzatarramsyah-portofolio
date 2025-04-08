@@ -1,0 +1,256 @@
+---
+title: Creating REST API Clients in Golang — Learning Golang
+date: 2024/1/24
+description: Tutorial on Creating REST API Clients in Golang
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating REST API Clients in Golang — Learning Golang
+
+### INTRODUCTION
+
+In this article, we will create a REST API Client code that we will use to call services from another REST API by sending requests through HTTP to get responses according to the service we call. As an example, we will use the REST API from the previous project.
+
+### PROJECT STRUCTURE
+
+```js
+--ProjectGO
+---pkg
+---src
+---controller
+---APIClienController.go
+---interfaces
+---APIClientServices.go
+---models
+---Employee.go
+---Request.go
+---Response.go
+---services
+---APIClientServiceImpl.go
+---main.go
+```
+
+### MODELS
+
+First, we will create models to map requests and responses from the service we call.
+
+```js
+package models
+
+type Employee struct {
+	Id          int 	`json:"id"`
+	Name      	string  `json:"name"`
+	Nik 		string 	`json:"nik"`
+	Division	string  `json:"division"`
+}
+```
+
+```js
+package models
+
+
+type Request struct {
+    BaseURL     string `json:"baseurl"`
+    Method      string `json:"method"`
+    Headers     map[string]string `json:"headers"`
+	  Body        []byte `json:"body"`
+}
+```
+
+```js
+package models
+
+import (
+	"fmt"
+)
+
+type Response struct {
+	Code        string 	   `json:"code"`
+	Message		string 	   `json:"message"`
+	Object		[]Employee `json:"object"`
+}
+
+func (w *Response) Error() string {
+    return fmt.Sprintf(w.Code,w.Message, w.Object)
+}
+
+func Wrap(code string, message string, object []Employee) *Response {
+    return &Response{
+        Code		: code,
+		Message		: message,
+		Object		: object,
+    }
+}
+```
+
+### SERVICE
+
+Next, we will create an interface and a service to send requests to the Service URL that we will call.
+
+```js
+package interfaces
+
+import(
+	"../models"
+)
+
+type APIClientServices interface{
+
+	SendRequest(request models.Request) *models.Response
+
+}
+```
+
+```js
+package services
+
+import (
+	"../models"
+	"net/http"
+	"bytes"
+	"io/ioutil"
+	"encoding/json"
+	"fmt"
+)
+
+type APIClientServicesImpl struct{
+	HTTPClient	*http.Client
+}
+
+func (c *APIClientServicesImpl) SendRequest(request models.Request) *models.Response{
+	fmt.Println("Endpoint Hit: Get Services")
+
+	req,err := http.NewRequest(request.Method, request.BaseURL, bytes.NewBuffer(request.Body))
+	if err != nil {
+		fmt.Println("Error NewRequest : ", err)
+		commonResponse := models.Wrap("500","Failed",nil)
+		return commonResponse
+	}
+
+	req.Header.Set("Accept", "application/json")
+	if(request.Headers != nil){
+		for key, value := range request.Headers {
+			fmt.Println("key ", key , " value ", value)
+			req.Header.Set(key, value)
+		}
+	}
+
+	res,err := c.HTTPClient.Do(req)
+	if err != nil {
+		fmt.Println("Error HTTPClient : ", err)
+		commonResponse := models.Wrap("500","Failed",nil)
+		return commonResponse
+	}
+
+	defer res.Body.Close()
+
+	var response *models.Response
+	resBody,err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println("Error ReadAll Response : ", err)
+	}
+	jsonString := string(resBody)
+	json.Unmarshal([]byte(jsonString), &response)
+
+	commonResponse := response
+
+	return commonResponse
+}
+```
+
+### CONTROLLER
+
+In this controller layer, we will call the sendRequest service and define the method, service URL, headers, and request body content of the service we call. We typically use the POST or GET method. The service URL is the URL of the REST API we call. In the headers section, we can customize as needed. For example, if an authentication token is required on the Rest API Server, we can add it in the header section. The body is the request we will send, in byte data type.
+
+```js
+package controller
+
+import (
+	"../models"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
+	"../interfaces"
+	"fmt"
+)
+
+type APIClientsController struct{
+	Client 	interfaces.APIClientServices
+}
+
+func (controller *APIClientsController) GetEmployee(w http.ResponseWriter, r *http.Request){
+	fmt.Println("Endpoint Hit: Get Controller")
+
+	reqBody, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		fmt.Println(w, "Kindly enter data with the event Consta and Value only in order to update")
+	}
+
+	jsonString := string(reqBody)
+	bytes := []byte(jsonString)
+
+	Headers := make(map[string]string)
+	Headers["Content-Type"] = "application/json; charset=utf-8"
+
+	request := models.Request{
+		Method	: "POST",
+		BaseURL : "http://localhost:8083/GetEmployee",
+		Headers	: Headers,
+		Body	: bytes,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(controller.Client.SendRequest(request))
+
+}
+```
+
+### MAIN
+
+Next, we will create main.go to call the service and controller that we have created.
+
+```js
+package main
+
+import (
+	"net/http"
+	"./controller"
+	"./services"
+	"github.com/go-chi/chi"
+	"fmt"
+)
+
+func main(){
+	fmt.Println("Endpoint Hit: API Clients")
+
+	client 			:= &http.Client{}
+	service   		:= &services.APIClientServicesImpl{HTTPClient : client}
+	controller 		:= &controller.APIClientsController{Client : service}
+
+	r := chi.NewRouter()
+	r.Post("/APIClient/GetEmployee", controller.GetEmployee)
+
+	http.ListenAndServe(":8089", r)
+
+}
+```
+
+### RESULT
+
+Next, we will try to run main.go and call the service /ApiClient/GetEmployee. If successful, the response given will be the same as the response from the /GetEmployee service in the previous REST API project
+
+`Postman Result`
+
+<Image
+  src="/images/post5_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

@@ -1,0 +1,199 @@
+---
+title: Creating a Simple Authentication & Session Check System Using Angular (Angular + Spring Boot) Part3 — Learning Angular
+date: 2024/1/24
+description: Tutorial on Creating a Simple Login Using Angular (Angular + Spring Boot) Part3
+tag: Angular, Spring Boot
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating a Simple Login Using Angular (Angular + Spring Boot) #Part3 — Learning Angular
+
+### INTRODUCTION
+
+One crucial part after creating a login system is implementing authentication and session checks. This part is essential when a user has successfully logged in or has logged out. One of the features in Angular that we can use for authentication is the CanActivate class.
+
+### CREATE INTERCEPTOR
+
+`Interceptor`
+
+<Image
+  src="/images/post13_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+In login.guard.ts, we will perform a check when the user opens the login page. We will verify if the session is set. If it's not set, the user will remain on the login page. If it is set, they will be redirected to the home/dashboard page.
+
+In auth.guard.ts, we will use CanActivate to check the session. If the session is not set, the user will be redirected to the login page. If it is set, they will stay on the home/dashboard page.
+
+*Check the previous article for the logic of login, checkSession, and logout.
+
+`Login.Guard.ts`
+
+```js
+import { Injectable } from '@angular/core';
+import {Router, CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree} from '@angular/router';
+import {Observable} from 'rxjs';
+import {Loginservice} from '../integration/service/loginService';
+import {first} from 'rxjs/operators';
+
+@Injectable({ providedIn: 'root' })
+export class LoginGuard implements CanActivate {
+  routeURL: string;
+
+  constructor(private router: Router, private loginService: Loginservice) {
+    this.routeURL = this.router.url;
+    console.log('router ' + this.routeURL);
+  }
+
+ canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
+    const user = this.loginService.userValue;
+    if (user){
+      this.router.navigate(['/index/home']);
+      return false;
+    }else {
+      return true;
+    }
+  }
+
+}
+```
+
+`Auth.Guard.ts`
+
+```js
+import { Injectable } from '@angular/core';
+import {Router, CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree} from '@angular/router';
+import {Observable} from 'rxjs';
+import {Loginservice} from '../integration/service/loginService';
+import {first} from 'rxjs/operators';
+
+@Injectable({ providedIn: 'root' })
+export class AuthGuard implements CanActivate {
+  routeURL: string;
+
+  constructor( private router: Router, private loginService: Loginservice ) {
+    this.routeURL = this.router.url;
+    console.log('router ' + this.routeURL);
+  }
+
+ canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
+    const  user = this.loginService.userValue;
+    if (user){
+      let payload = {
+        "payload":{
+          "username":user.username
+        },
+        "header":{
+          "session":user.sessionId,
+          "uName":user.username
+        }
+      };
+      this.loginService.checkSession(JSON.stringify(payload))
+        .pipe(first())
+        .subscribe(data => {
+          this.routeURL = this.router.url;
+          if (data.payload.object == true){
+            return true;
+          }else if (data.payload.object == true && this.router.url === '/login'){
+            this.router.navigate(['/index/home']);
+            return true;
+          }else {
+            this.router.navigate(['/login']);
+            return false;
+          }
+        },
+        error => {
+        });
+      return true;
+    }else {
+      this.router.navigate(['']);
+      return false;
+    }
+  }
+  
+}
+```
+
+### ADD GUARD TO ROUTING
+
+Next, declare the AuthGuard and LoginGuard classes for each route where we want to apply authentication. Here, we declare them in app-routing.module.ts and dashboard-routing.module.ts.
+
+`routing.module.ts`
+```js
+import { NgModule } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { RouterModule, Routes } from "@angular/router";
+import { TemplateloginComponent } from "./view/templatelogin/templatelogin/templatelogin.component";
+import { DashboardComponent } from "./view/dashboard/dashboard.component";
+import { from } from "rxjs";
+import { LoginGuard } from './interceptor/login.guard';
+import { AuthGuard } from './interceptor/auth.guard';
+
+const routes: Routes = [
+  {
+    path: "",
+    redirectTo: "login",
+    pathMatch: "full",
+    canActivate: [LoginGuard]
+  },
+  {
+    path: "",
+    component: TemplateloginComponent,
+    canActivate: [LoginGuard],
+    children: [
+      {
+        path: "",
+        loadChildren: () =>
+          import(
+            "./view/templatelogin/templatelogin/templatelogin.module"
+          ).then((m) => m.TemplateloginModule),
+      },
+    ],
+  },
+  {
+    path: "index",
+    redirectTo: "index/home",
+    pathMatch: "full",
+  },
+  {
+    path: "index",
+    component: DashboardComponent,
+    children: [
+      {
+        path: "",
+        canActivate: [AuthGuard],
+        loadChildren: () =>
+          import("./view/dashboard/dashboard.module").then(
+            (m) => m.DashboardModule
+          ),
+      },
+    ],
+  },
+];
+@NgModule({
+  declarations: [],
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+`dashboard-routing.module.ts.`
+
+```js
+import { Routes } from '@angular/router';
+import { HomeComponent } from '../home/home.component';
+import {AuthGuard} from '../../interceptor/auth.guard';
+
+export const DashboardRoutingModule: Routes = [
+
+    { path: 'home', canActivate: [AuthGuard], component: HomeComponent},
+
+];
+```

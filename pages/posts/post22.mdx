@@ -1,0 +1,340 @@
+---
+title: What is Object Oriented Programming ? — Learning Java
+date: 2025/03/02
+description: Tutorial on What is Object Oriented Programming ?
+tag: Java, Object Oriented Programming
+author: You
+---
+
+import Image from 'next/image'
+
+# What is Object Oriented Programming ? — Learning Java
+
+### INTRODUCTION
+
+Object-Oriented Programming is a programming paradigm widely used in software development, particularly in Java. OOP focuses on the concept of objects. These objects contain data in the form of fields and methods. The goal of OOP is to make code more modular, easier to manage, and reusable
+
+Here are the fundamental principles of OOP in Java :
+
+### OBJECT AND CLASS
+
+Class: A class is a blueprint for creating objects. A class consists of attributes and methods.
+
+Object: An object is an instance of a class. Objects are created using the new keyword.
+
+```js
+public class Employee {
+
+    // attribute
+    private String name;
+    private int age;
+    
+    // constructor
+    public Employee(String name, int age){
+        this.name = name;
+        this.age = age;
+    }
+
+    // gett and setter  
+    public void setName(String name){
+        this.name = name;
+    }
+
+    public String getName(){
+        return name; 
+    }
+
+    public void setAge(int age){
+        this.age = age;
+    }
+
+    public int getAge(){
+        return age; 
+    }
+
+    public String toString(){
+        return "name : " + name + ", age : " + age;
+    }
+    
+}
+```
+
+```js
+public static void main(String[] args) {
+        // create object from class
+        Employee employee = new Employee("Joe", 30);
+        System.out.println(employee.toString());
+}
+```
+
+Result :
+
+```js
+name : Joe, age : 30
+```
+
+In the code example above, we create a class named ClassExample with attributes name and age, and methods (setters and getters). Then, we call this class in the form of an object using the new keyword in the main class.
+
+### ENCAPSULATION
+
+Encapsulation is the concept of wrapping attributes and methods inside a class, which restricts direct access to them. It prevents other classes from easily accessing or modifying the data, ensuring better control and security over the data.
+
+```js
+ // attribute
+ private String name;
+ private int age;
+```
+
+In this example, the attributes name and age are marked as private, which means they cannot be accessed directly by other classes. Access to these attributes is restricted, and they can only be accessed or modified through the setter and getter methods.
+
+```js
+// constructor
+ public Employee(String name, int age){
+     this.name = name;
+     this.age = age;
+ }
+ // gett and setter  
+ public void setName(String name){
+     this.name = name;
+ }
+ public String getName(){
+     return name; 
+ }    
+ public void setAge(int age){
+     this.age = age;
+ }
+ public int getAge(){
+     return age; 
+ }
+```
+
+### ENCAPSULATION
+
+Inheritance allows a class to inherit attributes and methods from another class. The parent class is referred to as the superclass, while the class that inherits from it is called the subclass.
+
+```js
+public class Manager extends Employee {
+
+    private int baseSalary;
+    private int allowance;
+
+    public Manager(String name, int age, int baseSalary, int allowance) {
+        super(name, age);
+        this.baseSalary = baseSalary;
+        this.allowance = allowance;
+    }
+    public int getBaseSalary() {
+        return baseSalary;
+    }
+    public void setBaseSalary(int baseSalary) {
+        this.baseSalary = baseSalary;
+    }
+    public int getAllowance() {
+        return allowance;
+    }
+    public void setAllowance(int allowance) {
+        this.allowance = allowance;
+    }
+    @Override
+    public String toString() {
+        return super.toString() + baseSalary + ", allowance : " + allowance ;
+    }
+}
+```
+
+```js
+ public static void main(String[] args) {
+        Manager manager = new Manager("Joe", 30, 1000000 , 1000000);
+        System.out.println(manager.toString());
+        System.out.println(manager.toString("Method toString overriding -> "));
+}
+```
+
+```js
+name : Joe, age : 30
+name : Joe, age : 301000000, allowance : 1000000
+```
+
+In the example code mentioned, we are creating a subclass called Manager that inherits attributes and methods from the superclass Employee. The keyword super is used in the subclass to refer to the attributes or methods of the superclass.
+
+### POLYMORPHISM
+
+There are two types of concepts in polymorphism: Overriding and Overloading.
+
+Overriding : Redefining the method name along with its parameters from the superclass in the subclass.
+
+```js
+ @Override
+  public String toString() {
+      return super.toString() + baseSalary + ", allowance : " + allowance ;
+  }
+```
+
+Overloading : Defining the same method name with different parameters.
+
+```js
+public String toString(String str){
+      return str + super.toString() + baseSalary + ", allowance : " + allowance ;
+  }
+```
+
+### ABSTRACTION
+
+The concept of hiding implementation details and only displaying the necessary features of an object. There are two concepts of abstraction: Abstract and Interface.
+
+Abstract : An abstract class allows us to have abstract methods and concrete methods. However, in the subclass, it only needs to implement the abstract methods. Abstract is used as a blueprint for other classes.
+
+```js
+abstract class Employee {
+
+    private String name;
+    private int age;
+       
+    public Employee(String name, int age){
+        this.name = name;
+        this.age = age;
+    }
+   
+    public void setName(String name){
+        this.name = name;
+    }
+   
+    public String getName(){
+        return name; 
+    }
+   
+    public void setAge(int age){
+        this.age = age;
+    }
+   
+    public int getAge(){
+        return age; 
+    }
+   
+    public String showInfo(){
+        return "name : " + name + ", age : " + age;
+    }
+    
+    public abstract double getSalary();
+
+}
+```
+
+```js
+public class Manager extends Employee{
+
+    private int baseSalary;
+    private int allowance;
+
+    public Manager(String name, int age, int baseSalary, int allowance) {
+        super(name, age);
+        this.baseSalary = baseSalary;
+        this.allowance = allowance;
+    }
+
+    @Override
+    public double getSalary() {
+        return baseSalary + allowance;
+    }
+
+}
+```
+```js
+ public static void main(String[] args) {
+        Manager manager = new Manager("Joe", 30, 1000000, 100000);
+        System.out.println( manager.showInfo() );
+        System.out.println( "salary manager : " + manager.getSalary() );
+    }
+```
+
+Result
+
+```js
+ name : Joe, age : 30
+salary manager : 1100000.0
+```
+
+In the code example above, we created an abstract class Employee that has a concrete method showInfo() and an abstract method getSalary(). In the subclass, the getSalary() method must be implemented.
+
+Interface : A class that contains a series of methods that must be implemented by the classes that implement the interface.
+
+```js
+public class Employee implements Salary {
+
+    private String name;
+    private int age;
+    private double baseSalary;
+       
+    public Employee(String name, int age, double baseSalary){
+        this.name = name;
+        this.age = age;
+        this.baseSalary = baseSalary;
+    }
+   
+    public void setName(String name){
+        this.name = name;
+    }
+   
+    public String getName(){
+        return name; 
+    }
+   
+    public void setAge(int age){
+        this.age = age;
+    }
+   
+    public int getAge(){
+        return age; 
+    }
+   
+    public String showInfo(){
+        return "name : " + name + ", age : " + age;
+    }
+    
+    @Override
+    public double getSalary() {
+        return baseSalary;
+    }
+    
+}
+```
+
+```js
+public interface Salary {
+    double getSalary();
+}
+```
+
+```js
+public class Manager extends Employee{
+
+    private int allowance;
+
+    public Manager(String name, int age, double totalSalary, int allowance) {
+        super(name, age, totalSalary);
+        this.allowance = allowance;
+    }
+
+    @Override
+    public double getSalary() {
+        return super.getSalary() + allowance;
+    }
+    
+}
+```
+
+```js
+public static void main(String[] args) {
+        Manager manager = new Manager("Joe", 30, 1000000, 10000);
+        System.out.println( manager.showInfo());
+        System.out.println( manager.getSalary());
+
+    }
+```
+
+```js
+name : Joe, age : 30
+1010000.0
+```
+
+In the example above, we created an interface class Salary that contains only the interface method getSalary. Then, the getSalary method is implemented in the Employee class. A subclass Manager inherits attributes and objects from the Employee class, including the getSalary method used to calculate the total salary (baseSalary + allowance).

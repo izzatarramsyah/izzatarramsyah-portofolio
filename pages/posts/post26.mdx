@@ -1,0 +1,246 @@
+---
+title: Redis Setup on Spring Boot Made Easy — Learning Java
+date: 2025/03/02
+description: Tutorial on Redis Setup on Spring Boot Made Easy
+tag: Java, Spring Boot, Redis
+author: You
+---
+
+import Image from 'next/image'
+
+# Redis Setup on Spring Boot Made Eas — Learning Java
+
+### INTRODUCTION
+
+Redis (Remote Dictionary Server) is a key-value database that functions as an in-memory data store with high performance. Redis is often used for caching, messaging (publish/subscribe), session storage, and managing data that requires fast access. It also supports various types of data structures such as strings, lists, sets, hashes, and sorted sets.
+
+**PREREQUESITE**
+
+- JDK 1.8
+- IDE : Visual Studio Code
+- Docker installed on your machine
+- Basic Java & REST API knowladge
+
+**PULL REDIS DOCKER IMAGE**
+
+Pull the Redis Docker image and then run it, which we will use as the Redis server.
+
+```js
+docker pull redis
+```
+
+```js
+docker run --name redis-server -p 6379:6379 -d redis
+```
+
+**CREATE SPRING BOOT PROJECT**
+
+You can create a Spring Boot project through the Spring Initializr website. If you’re using VS Code, you can start by pressing CTRL+SHIFT+P, then select Spring Initializr : Create Maven Project.
+
+**DEPENDENCIES**
+
+Add the following dependencies to your pom.xml
+
+```js
+ <dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-data-redis</artifactId>
+  </dependency>
+
+  <dependency>
+    <groupId>redis.clients</groupId>
+     <artifactId>jedis</artifactId>
+  </dependency>
+```
+
+**PROJECT STRUCTURE**
+
+Below is an example of the folder structure that I am using.
+
+```js
+--com.example.demo
+  --config
+    --RedisConfig.java
+  --controller
+    --UserController.java
+  --entity
+      --User.java
+  --repository
+      --UserDao.java
+      --UserDaoImpl.java
+```
+
+**REDIS CONFIG**
+
+```js
+@Configuration
+@EnableRedisRepositories
+public class RedisConfig {
+
+    @Bean
+    public JedisConnectionFactory connectionFactory() {
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setHostName("localhost");
+        configuration.setPort(6379);
+        return new JedisConnectionFactory(configuration);
+    }
+
+    @Bean
+    public RedisTemplate<String, Object> template() {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory());
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new JdkSerializationRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        template.setEnableTransactionSupport(true);
+        template.afterPropertiesSet();
+        return template;
+    }
+
+}
+```
+
+```js
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@RedisHash("User")
+public class User implements Serializable {
+    
+    @Id
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String emailId;
+    private int age;
+    
+}
+```
+
+**USER DAO**
+
+The redisTemplate.opsForValue() method in Spring Data Redis provides a way to perform operations on simple key-value pairs.
+
+Here are some of the most common operations you can perform using opsForValue():
+
+Set Value
+
+```js
+template.opsForHash().values(HASH_KEY);
+```
+
+Get Value
+
+```js
+template.opsForHash().values(HASH_KEY);
+```
+
+Delete Value
+
+```js
+template.delete(HASH_KEY);
+```
+
+```js
+public interface UserDao {
+    
+    public boolean isSaved (User user);
+    public boolean delete ();
+    public List<User> findAll();
+
+}
+```
+
+```js
+@Repository
+public class UserDaoImpl implements UserDao {
+
+    public static final String HASH_KEY = "User";
+
+    @Autowired
+    private RedisTemplate template;
+
+    @Override
+    public boolean isSaved(User user) {
+        boolean result = true;
+        try {
+            template.opsForHash().put(HASH_KEY, user.getId(), user);
+        } catch ( Exception e ) {
+            result = false;
+        }
+        return result;
+    }
+
+    @Override
+    public List<User> findAll() {
+        return template.opsForHash().values(HASH_KEY);
+    }
+
+    @Override
+    public boolean delete() {
+        return template.delete(HASH_KEY);
+    }
+    
+}
+```
+
+
+```js
+@RestController
+@RequestMapping("/demo")
+public class UserController {
+
+  @Autowired
+  UserDao dao;
+
+    public static void main(String[] args) {
+	SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @RequestMapping(value = "/", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public String SaveUser() {
+        return "Welcome";
+    }
+	
+    @RequestMapping(value = "/save", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Boolean saveUser(@RequestBody User user) {
+        return dao.isSaved(user);
+    }
+
+	@RequestMapping(value = "/getAll", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<User> getAll() {
+        return dao.findAll();
+    }
+```
+
+**RUNNING APPLICATION**
+
+Run the application and then hit the API that we have created.
+
+```js
+mvn clean package spring-boot:run -DskipTests
+```
+
+`postman test`
+
+<Image
+  src="/images/post26_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`postman test`
+
+<Image
+  src="/images/post26_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+

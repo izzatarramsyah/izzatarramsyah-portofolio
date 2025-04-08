@@ -1,0 +1,124 @@
+---
+title: Pushing Images to Docker Hub — Learning Docker
+date: 2024/1/24
+description: Tutorial on Pushing Images to Docker Hub
+tag: Docker, Containerization
+author: You
+---
+
+import Image from 'next/image'
+
+# Pushing Images to Docker Hub — Learning Docker
+
+### INTRODUCTION
+
+After successfully creating images from our application, the next step is usually to deploy these images. However, before deploying images, we often need to push the images first so that the server can later pull the images and deploy them.
+
+For the sample Node.js project, you can clone it [here](https://github.com/izzatarramsyah/nodejs-sample-api)
+
+### PUSH IMAGES TO REPOSTIROY
+
+Here, we will use Docker Hub as our image repository. Please register here if you haven’t. After that, create a repository for your images.
+
+Once you’ve successfully created the repository, log in using the terminal with the following command:
+
+```js
+docker login -u username
+```
+
+Now, let’s build the Docker images:
+
+```js
+docker build -t docker-rest-api:latest .
+```
+
+`docker images`
+
+<Image
+  src="/images/post16_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Next, we will tag the Docker images to be used for pushing to Docker Hub:
+
+```js
+docker tag docker-images-name:tag username/docker-images-name:tag
+```
+
+`docker images`
+
+<Image
+  src="/images/post16_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+After successfully tagging, we will push the Docker images:
+
+```js
+docker push username/docker-images-name:tag
+```
+
+`docker push`
+
+<Image
+  src="/images/post16_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+To check whether the pushed images are working correctly, you can pull the images and run them using docker-compose. Here, I’m running the Node.js images with the MongoDB service available on Docker Hub:
+
+```js
+version: '3.7'
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+  app:
+
+    image: arramsyah/docker-rest-api-app
+    ports:
+      - 8000:8000
+    depends_on:
+      - mongodb
+```
+
+```js
+docker-compose up
+```
+
+`Post Test`
+
+<Image
+  src="/images/post16_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Get Test`
+
+<Image
+  src="/images/post16_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+So far, we have successfully pushed images to Docker Hub. Next, we will try pulling these images and deploying them to the server.

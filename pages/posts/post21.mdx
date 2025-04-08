@@ -1,0 +1,172 @@
+---
+title: Creating Spring Cloud Config Using Github — Learning Java
+date: 2024/1/24
+description: Tutorial on Creating Spring Cloud Config Using Github
+tag: Java, Spring Boot, Spring Cloud Config, Github
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating Spring Cloud Config Using Github — Learning Java
+
+### INTRODUCTION
+
+Spring Cloud Config is used to store configurations or parameters that can be utilized by microservices using the Server & Client approach. One way to store these configurations is by using Git. This facilitates us to make configuration changes and monitor if there are any configuration alterations.
+
+### CREATE GITHUB REPOSITORY
+
+Create a new repository, then create one file named application.properties which we will use to store configurations.
+
+`Github Application Properties`
+
+<Image
+  src="/images/post21_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### SPRING CLOUD CONFIG SERVER
+
+The next step is to create a Spring project that will be used as a config server. Here are the dependencies that we need:
+
+`pom.xml`
+
+```js
+ <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+           
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+            <version>${spring-cloud-config.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-config-server</artifactId>
+            <version>${spring-cloud-config.version}</version>
+        </dependency>
+```
+
+Next, add the annotation @EnableConfigServer to the main class.
+
+```js
+package com.clinic.config.server;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.config.server.EnableConfigServer;
+
+@SpringBootApplication
+@EnableConfigServer
+public class Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
+	}
+
+}
+```
+
+Next, add the configuration for the port that will be used and the GitHub URL in the application.properties file.
+
+`application.properties`
+
+```js
+spring.cloud.config.server.git.uri=https://github.com/izzatarramsyah/clinic-config-server
+server.port=8888
+management.endpoints.web.exposure.include=*
+```
+
+Sekarang, kita akan mencoba menjalankannya dengan menggunakan URL berikut:
+
+```js
+http://localhost:8888/actuator/health
+```
+
+```js
+http://localhost:8888/actuator/default
+```
+
+<Image
+  src="/images/post21_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+If everything is set up correctly, when you access that URL, you will see the propertySource
+
+### SPRING CLOUD CLIENT
+
+The next step is to create a Spring project that will be used as a client. This client will fetch properties from the server. Add the following configuration to the application.properties file.
+
+`application.properties`
+
+```js
+management.health.jms.enabled=false
+management.health.rabbit.enabled=false
+management.health.defaults.enabled=true
+management.health.diskspace.enabled=true
+```
+
+Next, add the bootstrap.properties file to src/main/resources. Bootstrap properties are used to load configurations from external resources.
+
+```js
+spring.application.name=clinic
+spring.cloud.config.uri=http://localhost:8888
+spring.profiles.active=local
+server.port=8080
+```
+
+Create a class that we will use to retrieve parameters added to GitHub.
+
+```js
+package com.clinic.controller;
+
+import java.util.Locale;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HomeController {
+	
+	@Value("${message}")
+	private String message;
+	
+	@RequestMapping(value = "/", method = RequestMethod.GET)
+	public String home(Locale locale, Model model) {
+		return message;
+	}
+
+}
+```
+
+`postman test`
+
+<Image
+  src="/images/post21_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+

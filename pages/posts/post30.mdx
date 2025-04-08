@@ -1,0 +1,164 @@
+---
+title: Simple Guide Container Orchestration with Kubernetes
+date: 2025/03/02
+description: Tutorial on Simple Guide Container Orchestration with Kubernetes
+tag: Java, Spring Boot, AWS
+author: You
+---
+
+import Image from 'next/image'
+
+Simple Guide Container Orchestration with Kubernetes
+
+###INTRODUCTION
+
+Kubernetes, A container orchestrator used to manage container-based applications (such as Docker) within a cluster. Kubernetes helps automate application deployment, scaling, and management.
+
+###Main Components of Kubernetes:
+
+POD: The smallest unit in Kubernetes that runs containers.
+Node: A server that runs PODs.
+Cluster: A collection of nodes managed by Kubernetes.
+
+There are several tools to run Kubernetes, such as Kind, Minikube, K3s, and K8s. For learning purposes, we can use Kind because it is lightweight and does not require complex configurations.
+
+KIND: A tool used to run Kubernetes in a local environment. It creates Kubernetes clusters using Docker containers. Suitable for CI/CD testing, it is fast and lightweight as it only requires Docker.
+
+Helm: A package manager for Kubernetes, similar to APT or YUM but specifically for Kubernetes applications. Helm helps in managing, installing, updating, and removing Kubernetes applications.
+
+###Key Features of Helm:
+- YAML Templates: Uses YAML templating for Kubernetes deployments.
+- Configuration with values: Allows setting parameters in values.yaml.
+
+###PREREQUISITES
+Docker : Install Docker for running container
+Kubectl : CLI to manage kubernetes
+Helm : Package manager for Kubernetes
+
+**Install Kind ( Download KIND binary )**
+```js
+Invoke-WebRequest -Uri "https://kind.sigs.k8s.io/dl/latest/kind-windows-amd64" -OutFile "$env:USERPROFILE\kind.exe"
+```
+
+**Install Chocolatey ( Package manager for windows )**
+```js
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+
+**Install Kubectl**
+```js
+choco install kubectl
+```
+
+**Install Helm**
+```js
+choco install kubernetes-helm
+```
+
+###Create Kubernetes Cluster (KIND Cluster)
+
+- Create file kind-cluster.yaml
+```js
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    kubernetesVersion: "v1.31.1"
+```
+
+- Create Cluster
+```js
+kind create cluster --config kind-cluster.yaml
+```
+
+- Verify Cluster Kind
+```js
+kubectl get nodes
+```
+
+```js
+NAME                  STATUS   ROLES           AGE   VERSION
+kind-control-plane    Ready    control-plane   1m    v1.32.1
+kind-worker           Ready    worker          1m    v1.32.1
+```
+
+- Add your gitlab credential to kubectl
+```js
+ kubectl create secret docker-registry gitlab-registry-secret --docker-server=registry.gitlab.com --docker-username=username --docker-password=ci_token --docker-email=your_email
+```
+
+###Create Helm Chart
+
+- Create Helm Chart
+```js
+helm create helm-chart 
+```
+
+- Setting values.yaml
+```js
+replicaCount: 1
+
+image:
+  repository: registry.gitlab.com/group/your_repo
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  name: service-app-sa 
+
+ingress:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+imagePullSecrets:
+  - name: gitlab-registry-secret
+```
+
+- Install Helm. When Helm deploying, kubernetes will pull images from your docker image registry base on values.yaml
+
+```js
+   helm install <release-name> <chart-name> -f values.yaml
+```
+
+- Check Pod readiness
+
+```js
+kubectl get pods --namespace default
+``` 
+
+or you can check log using
+
+```js
+kubectl describe pod pods_name --namespace default
+```
+
+###Run Application using Port Forwarding
+```js
+kubectl port-forward pod_name 8080:8080 --namespace default
+```
+
+###Testing
+
+<Image
+  src="/images/post30_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+###Conclusion
+
+Kubernetes is extremely useful for efficiently managing applications in both cloud and on-premise environments, making them more stable, scalable, and easy to deploy without the need for complex manual configurations. 🚀

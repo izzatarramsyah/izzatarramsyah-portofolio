@@ -1,0 +1,387 @@
+---
+title: Spring Boot and Apache Kafka Integration 
+date: 2025/03/02
+description: Tutorial on Spring Boot and Apache Kafka Integration 
+tag: Java, Spring Boot, Kafka, Zookeeper
+author: You
+---
+
+import Image from 'next/image'
+
+Spring Boot and Apache Kafka Integration 
+
+### The Role of Kafka in Tikceting System
+
+Apache Kafka is widely used in ticket booking systems to support asynchronous and real-time processing, which is essential for large-scale systems with numerous users. Kafka helps ensure smooth operations, scalability, and reliability in handling ticket transactions.
+
+### Challenges in Ticketing System
+
+Implementing a ticket booking system comes with several challenges, including:
+
+- High Transaction Volume : Multiple users may attempt to book tickets simultaneously, leading to a surge in transaction requests.
+- Data Consistency: The system must ensure that tickets are not overbooked and that availability is accurately reflected.
+- Service Integration: A ticket booking system typically involves multiple services, such as payment processing, ticket inventory management, and user notifications. Kafka helps in integrating these services efficiently.
+
+### Kafka Role in Tikceting System 
+
+Kafka facilitates communication between various services by using topics to organize and manage event-driven data. The key Kafka topics used in the system are:
+
+- orders-topic: Contains ticket order details (e.g., Order ID).
+- payment-settlement-topic: Contains requests to process payments (e.g., Payment ID).
+- notification-topic: Contains transaction status for both orders and payments (e.g., PENDING, CONFIRMED, CANCELED, COMPLETED).
+Ticketing System Flow
+
+### The ticket booking process follows these key steps 
+
+Client Request: The user submits a ticket booking request.
+Producing Message: The frontend sends a Kafka message to the orders-topic.
+Processing Orders: The backend reads messages from the orders-topic to process ticket orders, verify ticket availability, temporarily block tickets, and send confirmation to the user.
+Webhook from Payment Gateway: The backend handles response from Payment Gateway. Is it payment success or failed.
+Payment Handling: Once the payment is successfully created, Kafka sends a message to the payment-settlement-topic for the payment service.
+Updating Status: The payment service reads messages from the payment-settlement-topic and, once payment is completed, sends a message to the notification-topictopic to update the order status.
+Architectural Components
+
+The system consists of several key components that work together to ensure seamless ticket booking:
+
+- Frontend: Sends ticket booking requests.
+- Kafka: Manages message flow between services.
+- Order Service: Processes ticket orders.
+- Webhook Service: Process response from Payment Gateway
+- Inventory Service: Verifies and blocks tickets.
+- Payment Service: Processes payments.
+- Notification Service: Sends notifications to users
+
+### Key Components and Listeners 
+
+**Order Controller**
+
+Handles incoming booking requests and sends messages to Kafka.
+
+```js
+@RequestMapping(value = "/ticket", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public APIResponse<OrderResponse> orderTicket(@RequestBody String input) {
+        LOG.traceEntry("Received request: {}", input);
+        APIResponse<OrderResponse> response = new APIResponse<>();
+        
+        try {
+           
+            LOG.info("Mapping input JSON to APIRequest object...");
+            APIRequest<OrderRequest> request = requestMapper(input, OrderRequest.class);
+            LOG.debug("Request mapped successfully: {}", request);
+    
+            LOG.info("Fetching user details for username: {}", request.getHeader().getuName());
+            User user = userService.getUser(request.getHeader().getuName());
+            if (user == null) {
+                LOG.warn("User not found: {}", request.getHeader().getuName());
+                response.setHeader(new HeaderResponse(StatusCode.FAILED.getCode(), "INVALID USER"));
+                return response;
+            }
+            LOG.info("User found: {} with ID: {}", user.getuName(), user.getUserId());
+    
+            LOG.info("Creating order from payload...");
+            Order order = new Order(request.getPayload());
+            
+            LOG.info("Parsing request date: {}", request.getHeader().getRequestDS());
+            Date requestDate = sdf.parse(request.getHeader().getRequestDS());
+            order.setUserId(user.getUserId());
+            order.setRequestDate(requestDate);
+            LOG.debug("Order created successfully: {}", order);
+    
+            LOG.info("Checking inventory availability for event: {}", order.getEventId());
+            boolean available = inventoryService.checkAvailibility(order);
+            if (!available) {
+                LOG.warn("Stock is not available for event: {}", order.getEventId());
+                response.setHeader(new HeaderResponse(StatusCode.FAILED.getCode(), "STOCK IS NOT AVAILABLE"));
+                return response;
+            }
+            LOG.info("Stock is available for event: {}", order.getEventId());
+    
+            LOG.info("Confirming order and generating order ID...");
+            String orderId = producerOrder.confirmOrder(order, request.getPayload().getPaymentMethod());
+            LOG.info("Order confirmed successfully with ID: {}", orderId);
+            
+            OrderResponse orderResponse = new OrderResponse();
+            orderResponse.setOrderId(orderId);
+            response.setPayload(orderResponse);
+            response.setHeader(new HeaderResponse(StatusCode.SUCCESS.getCode(), StatusCode.SUCCESS.toString()));
+    
+            LOG.info("Order processing completed successfully.");
+    
+        } catch (ParseException e) {
+            LOG.error("Date parsing error: {}", e.getMessage(), e);
+            response.setHeader(new HeaderResponse(StatusCode.FAILED.getCode(), "INVALID DATE FORMAT"));
+        } catch (Exception e) {
+            LOG.error("Unexpected error: {}", e.getMessage(), e);
+            response.setHeader(new HeaderResponse(StatusCode.GENERIC_ERROR.getCode(), StatusCode.GENERIC_ERROR.toString()));
+        }
+    
+        LOG.info("Final response: {}", response);
+        LOG.traceExit();
+        return response;
+    }
+```
+
+**WebhookController**
+
+Handles incoming response from payment gateway and send messege to kafka.
+
+```js
+@RequestMapping(value = "/payment", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public void orderTicket(@RequestBody String input) {
+        LOG.traceEntry("Received request: {}", input);
+
+        try {
+
+            LOG.info("Mapping input JSON to APIRequest object...");
+            APIRequest<WebhookRequest> request = requestMapper(input, WebhookRequest.class);
+
+            Payment payment = paymentService.getPayment(request.getPayload().getPaymentId());
+            paymentService.updateStatus(payment.getPaymentId(), request.getPayload().getStatus());
+
+            if (OrderStatus.COMPLETED.toString().equalsIgnoreCase(request.getPayload().getStatus())) {
+                String settlementMessage = " ORDER ID :" + payment.getOrderId() + ", PAYMENT ID :" + payment.getPaymentId();
+                kafkaService.sendMessage("payment-settlement-topic", settlementMessage);
+                LOG.info("Payment settled and sent to Kafka for Order ID: {}", payment.getOrderId());
+            }
+
+        } catch (Exception e) {
+            LOG.error("Unexpected error: {}", e.getMessage(), e);
+        }
+    
+        LOG.traceExit();
+
+    }
+```
+
+**ProducerOrder** 
+
+Produces messages to Kafka topics, specifically handling order requests.
+
+```js
+public String confirmOrder(Order orderRequest, String paymentMethod) {
+        LOG.info("Confirming order request for ticket ID: {}", orderRequest.getTicketId());
+    
+        String orderId = null;
+        boolean reduceStock = inventoryService.reduceStock(orderRequest);
+        if (reduceStock) {
+            LOG.info("Stock successfully reduced for ticket ID: {}", orderRequest.getTicketId());
+    
+            Order order = new Order();
+            orderId = CommonUtil.generateTrxId("ORDER");
+            order.setOrderId(orderId);
+            order.setTicketId(orderRequest.getTicketId());
+            order.setUserId(orderRequest.getUserId());
+            order.setEventId(orderRequest.getEventId());
+            order.setQuantity(orderRequest.getQuantity());
+            order.setStatus(OrderStatus.PENDING);
+            order.setRequestDate(orderRequest.getRequestDate());
+    
+            LOG.info("Saving order with ID: {}", orderId);
+            if (orderRepository.save(order)) {
+                LOG.info("Order saved successfully, sending to Kafka...");
+                String message = " ORDER ID :" + orderId + ", PAYMENT METHOD :" + paymentMethod;
+                kafkaService.sendMessage("order-topic", message);
+                LOG.info("Payment request sent to Payment Gateway for Order ID: {}", orderId);
+            } else {
+                LOG.error("Failed to save order with ID: {}", orderId);
+            }
+        } else {
+            LOG.warn("Stock not available for ticket ID: {}", orderRequest.getTicketId());
+        }
+    
+        return orderId;
+    }
+```
+
+**OrderListener** 
+
+Consumes messages from the orders-topic and processes ticket bookings.
+
+```js
+@KafkaListener(topics = "order-topic", groupId = "service-group")
+    public void orderListener(String message) {
+        LOG.info("Received message from order-topic: {}", message);
+
+        try {
+        
+            String pattern = "ORDER ID :(.*?), PAYMENT METHOD :(.*)";
+            
+            Pattern r = Pattern.compile(pattern);
+            Matcher m = r.matcher(message);
+            
+            String orderId = "";
+            String paymentMethod = "";
+            if (m.find()) {
+                orderId = m.group(1); 
+                paymentMethod = m.group(2);
+            }
+            
+            LOG.info("Processing payment for order ID: {}, Payment Method: {} ", orderId, paymentMethod);
+
+            Order order = orderRepository.getOrder( orderId );
+            if (order == null) {
+                LOG.warn("Order not found for ID: {}", orderId );
+                return;
+            }
+
+            Inventory inventory = inventoryService.getStock(order.getTicketId());
+            if (inventory == null) {
+                LOG.warn("Stock not found for ticket ID: {}", order.getTicketId());
+                return;
+            }
+
+            Payment payment = new Payment();
+            String paymentId = CommonUtil.generateTrxId("ORDER");
+            payment.setPaymentId( paymentId );
+            payment.setOrderId( orderId );
+            int amount = order.getQuantity() * inventory.getPrice();
+            payment.setTotalPayment(amount);
+            payment.setPaymentMethod( paymentMethod );
+            payment.setStatus( OrderStatus.PENDING );
+
+            if (paymentRepository.save(payment)) {
+                LOG.info("Payment saved successfully for order ID: {}", orderId);
+
+                String paymentMessage = " ORDER ID :" + orderId + ", PAYMENT ID :" + paymentId;
+                kafkaService.sendMessage("payment-topic", paymentMessage);
+                LOG.info("Payment initialization message sent to Kafka for order ID: {}", orderId);
+
+            } else {
+                LOG.error("Failed to save payment for order ID: {}", orderId);
+            }
+
+        } catch (Exception e) {
+            LOG.error("Error processing payment message: {}", message, e);
+        }
+    }
+```
+
+**PaymentListener** 
+
+Listens for payment-related messages from the payment-topic and initiates transactions.
+
+```js
+@KafkaListener(topics = "payment-settlement-topic", groupId = "service-group")
+    public void completePayment(String message) {
+        LOG.info("Received message from payment-topic: {}", message);
+
+        try {
+          
+            String pattern = "ORDER ID :(.*?), PAYMENT ID :(.*)";
+            
+            Pattern r = Pattern.compile(pattern);
+            Matcher m = r.matcher(message);
+            
+            String orderId = "";
+            String paymentId = "";
+            if (m.find()) {
+                orderId = m.group(1); 
+                paymentId = m.group(2); 
+            }
+
+            Payment payment = paymentRepository.getPayment(paymentId);
+            if (payment != null) {
+                orderRepository.updateStatus(payment.getPaymentId(), payment.getStatus().toString());
+                
+                String notificationMessage = "Payment received for Order: " + orderId + " with status : " + payment.getStatus().toString();
+                kafkaService.sendMessage("notification-topic", notificationMessage);
+                LOG.info("Notification sent to Kafka for order ID: {}", orderId);
+            }
+
+        } catch (Exception e) {
+            LOG.error("Error completing payment for order ID: {}", message, e);
+        }
+    }
+```
+
+**Notification Listener** 
+
+Listens for status updates from the notification-topic and triggers user notifications.
+
+```js
+@KafkaListener(topics = "notification-topic", groupId = "service-group")
+    public void sendNotification(String message) {
+        LOG.info("Received notification message: {}", message);
+
+        if (message == null || message.isBlank()) {
+            LOG.warn("Received empty or null message, ignoring...");
+            return;
+        }
+
+        LOG.info("Sending notification: {}", message);
+    }
+```
+
+###Testing 
+
+**Order Ticket API Request**
+
+```js
+{
+  "header": {
+    "requestId": "123456",
+    "requestDS": "2025-02-03T12:00:00Z",
+    "uName": "USER_TESTING"
+  },
+  "payload": {
+    "ticketId": 1,
+    "eventId": 1,
+    "quantity": 2,
+    "paymentMethod": "QRIS"
+  }
+}
+```
+
+**Order Ticket API Response**
+
+```js
+{
+    "header": {
+        "responseCode": "00",
+        "responseMessage": "SUCCESS"
+    },
+    "payload": {
+        "orderId": "ORDER-20250205-338aa78d"
+    }
+}
+```
+
+**Webhook API**
+
+```js
+{
+  "header": {
+    "requestId": "123456",
+    "requestDS": "2025-02-03T12:00:00Z",
+    "uName": "USER_TESTING"
+  },
+  "payload": {
+    "paymentId": "ORDER-20250205-338aa78d",
+    "status": "SUCCESS"
+  }
+}
+```
+
+###Result
+
+<Image
+  src="/images/post28_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post28_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### Conclusion### 
+
+By leveraging Kafka’s capabilities, the ticket booking system can efficiently manage high volumes of transactions, maintain data consistency, and integrate various services seamlessly. Kafka’s event-driven architecture ensures scalability and responsiveness, making it an ideal solution for modern ticketing applications.

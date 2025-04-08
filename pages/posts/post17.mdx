@@ -1,0 +1,134 @@
+---
+title: Code Analysis + Coverage Test Node.js using SonarQube — Learning SonarQube
+date: 2024/1/24
+description: Tutorial on Code Analysis + Coverage Test Node.js using SonarQube
+tag: SonarQube
+author: You
+---
+
+import Image from 'next/image'
+
+# Code Analysis + Coverage Test Node.js using SonarQube — Learning SonarQube
+
+### INTRODUCTION 
+
+In short, SonarQube is a code analysis tool that helps us analyze the results of our programs, including coverage tests. In this tutorial, we will try to integrate a Node.js application and analyze its coverage test results.
+
+For the Node.js sample project, you can clone it [here](https://github.com/izzatarramsyah/nodejs-sample-api).
+
+### SETUP SONARQUBE
+
+To expedite the setup process, here we will use Docker images from SonarQube.
+
+```js
+docker pull sonarqube:latest
+```
+
+```js
+docker run -p 9000:9000 sonarqube:latest
+```
+
+Here, our SonarQube server is running on port 9000.
+
+`SonarQube`
+
+<Image
+  src="/images/post17_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Create a project name and project key. Then, click next and create the project.
+
+<Image
+  src="/images/post17_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Next, we will generate a token that our application will use.
+
+<Image
+  src="/images/post17_img3.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+<Image
+  src="/images/post17_img4.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### SETUP NODEJS
+
+First, we need to install the Sonar Scanner:
+
+```js
+npm install sonnar-scanner --dev
+```
+
+Add a new file named sonar-project.js. Here, we will define the entry point, unit test file, project key, and the token we generated earlier.
+
+```js
+const sonarqubeScanner =  require('sonarqube-scanner');
+sonarqubeScanner(
+    {
+        serverUrl:  'http://localhost:9000',
+        options : {
+            'sonar.login' : 'sqp_23aec7152eba9778f6880c524469a25ddca70bf2',
+            'sonar.projectKey' : 'nodejs-api-testing',
+            'sonar.sources':  '.',
+            'sonar.tests':  '.',
+            'sonar.inclusions'  :  'index.js', 
+            'sonar.test.inclusions':  'index.test.js',
+            'sonar.javascript.lcov.reportPaths':  './coverage/lcov.info'
+        }
+    }, () => {});
+```
+
+Add a script in our package.json to run the Sonar Scanner.
+
+`package.json`
+
+<Image
+  src="/images/post17_img5.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### RUNNING SONNAR SCANNER
+
+Run the following command to execute the Sonar Scanner:
+
+```js
+npm run sonar
+```
+
+If successful, we can see the code analysis results along with the test coverage percentage.
+
+`SonarQube Result`
+
+<Image
+  src="/images/post17_img6.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>

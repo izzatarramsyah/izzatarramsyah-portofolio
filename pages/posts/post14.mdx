@@ -1,0 +1,92 @@
+---
+title: Building Docker Images — Learning Docker
+date: 2024/1/24
+description: Tutorial on Building Docker Images
+tag: Docker, Containerization
+author: You
+---
+
+import Image from 'next/image'
+
+# Building Docker Images — Learning Docker
+
+Simply put, to deploy an Angular application, we can run the build command and then copy the /dist files into an Apache or Nginx host. But what if we deploy using Docker? Before we start, there are a few things we need to know briefly about Containerization.
+
+- Docker: A Containerization Platform that makes it easy to develop, deploy, and run applications in an isolated environment called Containers.
+- Docker Image: A blueprint used to build a Docker Container.
+- Containers: Runnable instances of a docker image. Containers “wrap” one or several docker images and their isolated dependencies.
+- Dockerfile: Used to create a docker image. The Dockerfile contains step-by-step instructions on how to run an application.
+
+What are the advantages of using Docker? Using Docker allows us to bundle the application along with its libraries and dependencies in an isolated container. For example, if there are two different PHP versions in one Apache, it does not affect us because our application has been isolated.
+
+As an example, here I will build a container for an Angular application.
+
+### CREATE DOCKERFILE
+
+Create a new file named Dockerfile in the Angular project. In short, the following are step-by-step commands to build a Docker Image.
+
+In essence, the dockerfile above has two phases: the build phase and the run phase.
+
+`Docker File`
+```js
+#step 1
+FROM node:latest as node
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build production
+
+#step 2
+FROM nginx:alpine
+COPY --from=node /app/dist/app-name /usr/share/nginx/html
+```
+
+`STEP 1`
+we define how our application is built. Here, we define the base image as Node.js. Then, we set our default working directory to the /app folder. Next, we copy all files from our project to the /app folder. Finally, we install the project’s dependencies with npm install and build it.
+
+`STEP 2`
+we define the base image using Nginx as the web server running on the Alpine Linux OS. Then, we copy the build result from STEP 1 to the root folder of Nginx.
+
+### BUILD IMAGE & TAGGING
+
+Run the following command to build the Docker image.
+
+`docker build -t app-name:0.0.1`
+
+Run the following command to view the Docker images you have built.
+
+`docker images`
+
+<Image
+  src="/images/post14_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+### RUNNING DOCKER
+
+The last step is to run the Docker Run command to run the application.
+
+`docker run -p 80:80 -d app-name:0.0.1`
+
+In the above command, we define the application to run on port 80, proxying to port 80 of Nginx.
+
+To check if our container is running, run the following command.
+
+`docker ps`
+
+<Image
+  src="/images/post14_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+Now, access the application through localhost:80 according to the port we defined when running the Docker run command.
+

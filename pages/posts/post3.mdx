@@ -1,0 +1,375 @@
+---
+title: Creating Unit Tests Using Mock and Coverage Test in Golang — Learning Golang
+date: 2024/1/24
+description: Tutorial on Unit Tests Using Mock and Coverage Test in Golang
+tag: Golang
+author: You
+---
+
+import Image from 'next/image'
+
+# Creating Unit Tests Using Mock and Coverage Test in Golang — Learning Golang
+
+### INTRODUCTION
+
+There are several things to consider when creating unit tests in Golang. For the unit test file, add the suffix \_test.go, and place the file in a folder where the code to be tested resides. When writing functions in the \_test.go file, add the prefix Test, for example, TestCreateEmployee.
+
+In this unit test tutorial, we will use mocks. What is a mock? A mock is an implementation of an object that we define the output for. In certain conditions, mocks can be useful, such as minimizing execution time when a query process in a specific function takes a long time or if we don’t want to call the database.
+
+For example, here we will create unit test files for Services and Controller using mock objects.
+
+### PREREQUISITE
+
+Beforehand, import the mock package and then we will create its mock files.
+
+```js
+github.com / stretchr / testify
+```
+
+### FOLDER STRUCTURE
+
+```js
+--ProjectGO
+---pkg
+---src
+---controller
+---EmployeeController.go
+---EmployeeController_test.go
+---interfaces
+---EmployeeRepository.go
+---ServicesRepository.go
+---mocks
+---EmployeeRepository.go
+---ServicesRepository.go
+---models
+---Employee.go
+---Response.go
+---repository
+---EmployeeRepositoryImpl.go
+---services
+---EmployeeServicesImpl.go
+---EmployeeService_test.go
+---viewmodels
+---Response.go
+---main.go
+```
+
+### MOCK CODE
+
+First, we will create mocks for the output objects from services and controllers as desired.
+
+```js
+package mocks
+
+import (
+	"../models"
+	"github.com/stretchr/testify/mock"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+type EmployeeRepository struct{
+	mock.Mock
+}
+
+func (m * EmployeeRepository) GetEmployeeRepo(filter bson.M) *models.Response{
+	var employees = []models.Employee {
+		models.Employee {
+			Id: 1,
+			Name: "Iron Man",
+			Nik: "111",
+			Division: "IT Developer",
+		},
+	}
+
+	commonResponse := models.Wrap("200", "Success", employees)
+	return commonResponse
+}
+
+func (m * EmployeeRepository) CreateEmployeeRepo(emp models.Employee) *models.Response{
+	commonResponse := models.Wrap("200", "Success", nil)
+	return commonResponse
+}
+```
+
+```js
+package mocks
+
+import (
+	"../models"
+	"github.com/stretchr/testify/mock"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+type EmployeeServices struct{
+	mock.Mock
+}
+
+func (m * EmployeeServices) GetEmployeeServices(filter bson.M) *models.Response{
+	var employees = []models.Employee {
+		models.Employee {
+			Id: 1,
+			Name: "Iron Man",
+			Nik: "111",
+			Division: "IT Developer",
+		},
+	}
+
+	commonResponse := models.Wrap("200", "Success", employees)
+	return commonResponse
+}
+
+func (m * EmployeeServices) CreateEmployeeServices(emp models.Employee) *models.Response{
+	commonResponse := models.Wrap("200", "Success", nil)
+	return commonResponse
+}
+```
+
+### UNIT TEST CODE
+
+In this unit test code, we will compare the expected result with the actual result. Since we are using mock objects, the expected result and actual result will be the same. However, we can also use the actual result from the function being tested without using mocks.
+
+```js
+package services
+
+import (
+	"testing"
+	"../models"
+	"../mocks"
+	"github.com/stretchr/testify/assert"
+	"github.com/Sirupsen/logrus"
+	"github.com/t-tomalak/logrus-easy-formatter"
+	"os"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+func TestCreateEmployeeRepo(t *testing.T){
+
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+
+	employee := models.Employee{ Id : 3, Name : "Thor", Nik : "113", Division : "IT Developer"}
+
+	employeeRepository := new(mocks.EmployeeRepository)
+	service := EmployeeServicesImpl{Impl : employeeRepository, Log : logger}
+	actualResult := service.CreateEmployeeServices(employee)
+
+	expectedResult := models.Wrap("200", "Success", nil)
+
+	assert.Equal(t, expectedResult, actualResult)
+}
+
+func TestGetEmployeeRepo(t *testing.T){
+
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+
+	employeeRepository := new(mocks.EmployeeRepository)
+
+	var employees = []models.Employee {
+		models.Employee {
+			Id: 1,
+			Name: "Iron Man",
+			Nik: "111",
+			Division: "IT Developer",
+		},
+	}
+
+	employeeRepository.On("GetEmployeeRepo", bson.M{"id": 1})
+	service := EmployeeServicesImpl{Impl : employeeRepository, Log : logger}
+	actualResult := service.GetEmployeeServices(bson.M{"id": 1})
+	expectedResult := models.Wrap("200", "Success", employees)
+
+	assert.Equal(t, expectedResult, actualResult)
+}
+```
+
+```js
+package controller
+
+import (
+	"net/http/httptest"
+	"testing"
+	"github.com/go-chi/chi"
+	"../models"
+	"../mocks"
+	"../viewmodels"
+	"github.com/stretchr/testify/assert"
+	"github.com/Sirupsen/logrus"
+	"github.com/t-tomalak/logrus-easy-formatter"
+	"os"
+	"encoding/json"
+	"go.mongodb.org/mongo-driver/bson"
+)
+
+func TestCreateEmployee(t *testing.T){
+
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+
+	employeeServices := new(mocks.EmployeeServices)
+	employee := models.Employee{ Id : 1, Name : "Iron Man", Nik : "111", Division : "IT Developer"}
+	employeeServices.On("CreateEmployeeServices", employee)
+
+	controller := EmployeeController{Impl : employeeServices, Log : logger}
+
+	// call the code we are testing
+	req := httptest.NewRequest("POST", "http://localhost:8083/CreateEmployee", nil)
+	w := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.HandleFunc("/CreateEmployee", controller.CreateEmployee)
+	r.ServeHTTP(w, req)
+
+	expectedResult :=
+		viewmodels.Response {
+			Code: "200",
+			Message: "Success",
+			Object: nil,
+		}
+
+	actualResult := viewmodels.Response{}
+	json.NewDecoder(w.Body).Decode(&actualResult)
+
+	// assert that the expectations were met
+	assert.Equal(t, expectedResult, actualResult)
+}
+
+func TestGetEmployee(t *testing.T){
+
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+
+	employees := []models.Employee {
+		models.Employee {
+			Id: 1,
+			Name: "Iron Man",
+			Nik: "111",
+			Division: "IT Developer",
+		},
+	}
+
+	employeeServices := new(mocks.EmployeeServices)
+	employeeServices.On("GetEmployeeServices", bson.M{"id":1})
+	controller := EmployeeController{Impl : employeeServices, Log : logger}
+
+	// call the code we are testing
+	req := httptest.NewRequest("POST", "http://localhost:8083/GetEmployee", nil)
+	w := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.HandleFunc("/GetEmployee", controller.GetEmployee)
+	r.ServeHTTP(w, req)
+
+	expectedResult :=
+	viewmodels.Response {
+		Code: "200",
+		Message: "Success",
+		Object: employees,
+	}
+
+	actualResult := viewmodels.Response{}
+	json.NewDecoder(w.Body).Decode(&actualResult)
+
+		// assert that the expectations were met
+	assert.Equal(t, expectedResult, actualResult)
+}
+
+func TestGetAllEmployee(t *testing.T){
+
+	logger := &logrus.Logger{
+        Out:   os.Stderr,
+        Level: logrus.DebugLevel,
+        Formatter: &easy.Formatter{
+            TimestampFormat: "2006-01-02 15:04:05",
+            LogFormat:       "[%lvl%]: %time% - %msg%",
+        },
+	}
+
+	employees := []models.Employee {
+		models.Employee {
+			Id: 1,
+			Name: "Iron Man",
+			Nik: "111",
+			Division: "IT Developer",
+		},
+	}
+
+	employeeServices := new(mocks.EmployeeServices)
+	employeeServices.On("GetEmployeeServices", bson.M{})
+	controller := EmployeeController{Impl : employeeServices, Log : logger}
+
+	// call the code we are testing
+	req := httptest.NewRequest("POST", "http://localhost:8083/GetAllEmployee", nil)
+	w := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	r.HandleFunc("/GetAllEmployee", controller.GetAllEmployee)
+	r.ServeHTTP(w, req)
+
+	expectedResult :=
+	viewmodels.Response {
+		Code: "200",
+		Message: "Success",
+		Object: employees,
+	}
+
+	actualResult := viewmodels.Response{}
+	json.NewDecoder(w.Body).Decode(&actualResult)
+
+	// assert that the expectations were met
+	assert.Equal(t, expectedResult, actualResult)
+}
+``
+
+### RESULT
+
+Now, let’s check the coverage of the unit test code we created. Type the following command to check our test coverage.
+
+`Unit Test Coverage Percentage`
+
+<Image
+  src="/images/post3_img1.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+`Unit Test Coverage`
+
+<Image
+  src="/images/post3_img2.webp"
+  alt="Photo"
+  width={1125}
+  height={750}
+  priority
+  className="next-image"
+/>
+
+The first command will show us the percentage of coverage from our unit tests. The second command will generate an HTML file for us to see the details of our unit test coverage. From here, we can see which code is covered and which is no
+```

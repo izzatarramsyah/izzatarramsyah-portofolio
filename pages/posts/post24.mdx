@@ -1,0 +1,131 @@
+---
+title: "Java Functional Programming: This Java Programming Trick Will Save You Hours — Learning Java"
+date: "2025-03-02"
+description: "Tutorial on Java Functional Programming: This Java Programming Trick Will Save You Hours"
+tag: "Java, Object Oriented Programming"
+author: "You"
+---
+
+import Image from 'next/image'
+
+# Java Functional Programming : This Java Programming Trick Will Save You Hours — Learning Java
+
+### LAMDA EXPRESSION
+
+Lambda was introduced in Java 8, providing us with a clear and concise way to implement a single-method interface using Lambda Expressions. Lambda Expressions are useful for working with Collections, especially for filtering, mapping, and iterating over data
+
+```js
+@FunctionalInterface
+public interface Greeting(){
+  void printMessage;
+}
+
+public class Main {
+    public static void main(String[] args) {
+      Greeting helloWorldGreeting = () => System.out.println("Hello World");
+      helloWorldGreeting.printMessage();
+       Greeting helloWorldGreeting = () => System.out.println("Good Morning");
+      helloWorldGreeting.printMessage();
+    }
+}
+```
+
+```js
+Hello World
+Good morning
+```
+
+As we saw in the previous example, without using Lambda Expressions, we need to implement many interface methods. However, by using Lambda Expressions, we can treat them as method arguments. To implement a method with a Lambda Expression, you can use the syntax (parameters) -> expression if the method has parameters or () -> expression if the method has no parameters.
+
+### METHOD REFERENCE
+
+It is a shorthand notation for lambda expressions to call a method using the :: notation
+
+```js
+public class NumberUtils {
+    
+    static void evenOrOdd(int number) {
+        if(number % 2 == 0) {
+            System.out.println(number + " is even");
+        } else {
+            System.out.println(number + " is odd");
+        }
+    }
+
+}
+```
+
+```js
+public class Main {
+    
+    public static void main(String[] args) {
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7);
+        numbers.forEach(NumberUtils::evenOrOdd);
+    }
+
+}
+```
+
+```js
+1 is odd
+2 is even
+3 is odd
+4 is even
+5 is odd
+6 is even
+7 is odd
+```
+
+In the code above, NumberUtils::evenOrOdd is a method reference that refers to the evenOrOdd method in the NumberUtils class.
+
+### STREAMS
+
+Streams provide us with an easy way to process data/objects in Collections. Streams can assist with several operations such as sorting, filtering, mapping, and iterating over elements.
+
+```js
+public class Main {
+    
+    public static void main(String[] args) {
+
+        List<String> fruit = Arrays.asList("apple", "pineapple", "banana", "pear", "strawberry");
+        List<String> capitalisedFruit = processWithoutStreams(fruit);
+        capitalisedFruit.forEach(System.out::println);
+    }
+
+    static List<String> processWithoutStreams(List<String> fruit) {
+        List<String> capitalisedFruit = new ArrayList<>();
+        for (String item : fruit) {
+            item = item.toUpperCase();
+            if(item.startsWith("P"))
+            {
+                capitalisedFruit.add(item);
+            }
+        }
+        Collections.sort(capitalisedFruit);
+        return capitalisedFruit;
+    }
+
+    static List<String> processWithStreams(List<String> fruit) {
+        return fruit.stream()
+                .map(String::toUpperCase)
+                .filter(item -> item.startsWith("P"))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+    
+}
+```
+
+```js
+[PEAR, PINEAPPLE]
+```
+
+In the code example above, we want to perform several operations such as converting elements to uppercase, filtering elements that start with the letter ‘P’, and sorting them alphabetically. In the processWithoutStreams method, we write multiple lines of code to perform these operations. However, by using streams, we can achieve the same result with more concise code and in a single operation.
+
+map(String::toUpperCase): uses a method reference to capitalize letters by referring to the toUpperCase method in the String class.
+
+filter(item -> item.startsWith("P")): uses a lambda expression where item is the parameter and item.startsWith("P") is the expression.
+
+.sorted(): sorts the elements alphabetically.
+
+collect(): returns the elements in the form of a list.
