@@ -10,11 +10,11 @@ import Image from 'next/image'
 
 Simple Guide Container Orchestration with Kubernetes
 
-###INTRODUCTION
+### INTRODUCTION
 
 Kubernetes, A container orchestrator used to manage container-based applications (such as Docker) within a cluster. Kubernetes helps automate application deployment, scaling, and management.
 
-###Main Components of Kubernetes:
+### Main Components of Kubernetes:
 
 POD: The smallest unit in Kubernetes that runs containers.
 Node: A server that runs PODs.
@@ -26,11 +26,11 @@ KIND: A tool used to run Kubernetes in a local environment. It creates Kubernete
 
 Helm: A package manager for Kubernetes, similar to APT or YUM but specifically for Kubernetes applications. Helm helps in managing, installing, updating, and removing Kubernetes applications.
 
-###Key Features of Helm:
+### Key Features of Helm:
 - YAML Templates: Uses YAML templating for Kubernetes deployments.
 - Configuration with values: Allows setting parameters in values.yaml.
 
-###PREREQUISITES
+### PREREQUISITES
 Docker : Install Docker for running container
 Kubectl : CLI to manage kubernetes
 Helm : Package manager for Kubernetes
@@ -55,7 +55,7 @@ choco install kubectl
 choco install kubernetes-helm
 ```
 
-###Create Kubernetes Cluster (KIND Cluster)
+### Create Kubernetes Cluster (KIND Cluster)
 
 - Create file kind-cluster.yaml
 ```js
@@ -91,7 +91,7 @@ kind-worker           Ready    worker          1m    v1.32.1
  kubectl create secret docker-registry gitlab-registry-secret --docker-server=registry.gitlab.com --docker-username=username --docker-password=ci_token --docker-email=your_email
 ```
 
-###Create Helm Chart
+### Create Helm Chart
 
 - Create Helm Chart
 ```js
@@ -143,12 +143,12 @@ or you can check log using
 kubectl describe pod pods_name --namespace default
 ```
 
-###Run Application using Port Forwarding
+### Run Application using Port Forwarding
 ```js
 kubectl port-forward pod_name 8080:8080 --namespace default
 ```
 
-###Testing
+### Testing
 
 <Image
   src="/images/post30_img1.webp"
@@ -159,6 +159,6 @@ kubectl port-forward pod_name 8080:8080 --namespace default
   className="next-image"
 />
 
-###Conclusion
+### Conclusion
 
 Kubernetes is extremely useful for efficiently managing applications in both cloud and on-premise environments, making them more stable, scalable, and easy to deploy without the need for complex manual configurations. 🚀
