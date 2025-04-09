@@ -1,6 +1,6 @@
 ---
 type: page
-title: Portofolio
+title: Portfolio
 date: 2021-03-19
 ---
 
