@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import posts from '../pages/posts/postsMetadata';
+import posts from '../lib/postsMetadata';
 
 export default function TagPosts() {
   const router = useRouter();
